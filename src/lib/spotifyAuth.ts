@@ -191,3 +191,122 @@ export function logoutSpotify(): void {
   localStorage.removeItem('sq.spotify.token');
   localStorage.removeItem('sq.auth.profile');
 }
+
+export interface SpotifyPlaylistSummary {
+  id: string;
+  name: string;
+  description: string;
+  cover?: string;
+  trackCount: number;
+  owner: string;
+  uri: string;
+  isPublic: boolean;
+}
+
+export const FEATURED_SPOTIFY_PLAYLISTS: SpotifyPlaylistSummary[] = [
+  {
+    id: '37i9dQZF1DXcZDD7cfEStW',
+    name: 'T-Pop Now',
+    description: 'รวมเพลงไทยป๊อปฮิตติดกระแสล่าสุด ฟังเพลิน ครบทุกเพลงดัง',
+    cover: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300&auto=format&fit=crop&q=80',
+    trackCount: 50,
+    owner: 'Spotify',
+    uri: 'spotify:playlist:37i9dQZF1DXcZDD7cfEStW',
+    isPublic: true,
+  },
+  {
+    id: '37i9dQZF1DXcBWIGoYBM5M',
+    name: "Today's Top Hits",
+    description: 'The hottest tracks right now across the global charts.',
+    cover: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300&auto=format&fit=crop&q=80',
+    trackCount: 50,
+    owner: 'Spotify',
+    uri: 'spotify:playlist:37i9dQZF1DXcBWIGoYBM5M',
+    isPublic: true,
+  },
+  {
+    id: '37i9dQZF1DX4Jukp7F2Y4P',
+    name: 'Thai 90s - 2000s Hits',
+    description: 'เพลงไทยยุคทอง 90s และ 2000s ที่ทุกคนร้องตามได้ทุกท่อน',
+    cover: 'https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=300&auto=format&fit=crop&q=80',
+    trackCount: 65,
+    owner: 'Spotify',
+    uri: 'spotify:playlist:37i9dQZF1DX4Jukp7F2Y4P',
+    isPublic: true,
+  },
+  {
+    id: '37i9dQZF1DX9tPFwDMOaN1',
+    name: 'K-Pop ON! (온)',
+    description: 'The ultimate destination for K-Pop bops and trending idols.',
+    cover: 'https://images.unsplash.com/photo-1526478806334-5fd488fcaabc?w=300&auto=format&fit=crop&q=80',
+    trackCount: 50,
+    owner: 'Spotify',
+    uri: 'spotify:playlist:37i9dQZF1DX9tPFwDMOaN1',
+    isPublic: true,
+  },
+  {
+    id: '37i9dQZF1DX8Uebhn9wzrS',
+    name: 'Anime Now & OST Classics',
+    description: 'Epic anime opening tracks, OSTs and J-Rock anthems.',
+    cover: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=300&auto=format&fit=crop&q=80',
+    trackCount: 45,
+    owner: 'Spotify',
+    uri: 'spotify:playlist:37i9dQZF1DX8Uebhn9wzrS',
+    isPublic: true,
+  },
+  {
+    id: '37i9dQZF1DWXRqgorJj26U',
+    name: 'Rock Classics',
+    description: 'Rock legends & timeless anthems across the generations.',
+    cover: 'https://images.unsplash.com/photo-1464375117522-1311d6a5b81f?w=300&auto=format&fit=crop&q=80',
+    trackCount: 75,
+    owner: 'Spotify',
+    uri: 'spotify:playlist:37i9dQZF1DWXRqgorJj26U',
+    isPublic: true,
+  },
+];
+
+export async function fetchUserSpotifyPlaylists(tokenOverride?: string): Promise<SpotifyPlaylistSummary[]> {
+  const token = tokenOverride || getSpotifyToken();
+  if (!token) {
+    throw new Error('no_token');
+  }
+
+  // If demo mock token, return curated presets
+  if (token.startsWith('mock_')) {
+    return FEATURED_SPOTIFY_PLAYLISTS;
+  }
+
+  try {
+    const res = await fetch('https://api.spotify.com/v1/me/playlists?limit=50', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (res.status === 401) {
+      localStorage.removeItem('sq.spotify.token');
+      throw new Error('token_expired');
+    }
+
+    if (!res.ok) {
+      throw new Error(`spotify_error_${res.status}`);
+    }
+
+    const data = await res.json();
+    const items: any[] = data.items || [];
+    return items.map((pl) => ({
+      id: pl.id,
+      name: pl.name || 'Untitled Playlist',
+      description: pl.description || '',
+      cover: pl.images?.[0]?.url,
+      trackCount: pl.tracks?.total || 0,
+      owner: pl.owner?.display_name || 'Spotify User',
+      uri: pl.uri,
+      isPublic: pl.public ?? true,
+    }));
+  } catch (err) {
+    console.warn('[Spotify Fetch Playlists Error]', err);
+    throw err;
+  }
+}
