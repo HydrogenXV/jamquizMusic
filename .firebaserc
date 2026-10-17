@@ -1,7 +1,5 @@
 {
   "projects": {
     "default": "jam-music-ea669"
-  },
-  "targets": {},
-  "etags": {}
+  }
 }

@@ -16,6 +16,8 @@ export const AuthModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
   const [copied, setCopied] = useState(false);
   const [showSpotifyHelp, setShowSpotifyHelp] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   const { redirectUri } = getSpotifyConfig();
 
@@ -36,14 +38,42 @@ export const AuthModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
   const handleGoogle = async () => {
     sfx.click();
-    await signInGoogle();
-    onClose();
+    setAuthError(null);
+    setIsLoggingIn(true);
+    try {
+      await signInGoogle();
+      onClose();
+    } catch (err: any) {
+      console.error('Google Sign-In failed:', err);
+      const code = err?.code || '';
+      const msg = err?.message || String(err);
+      if (code.includes('unauthorized-domain') || msg.includes('unauthorized-domain')) {
+        setAuthError(`โดเมน "${window.location.hostname}" ยังไม่ได้เพิ่มใน Firebase Console -> Authentication -> Settings -> Authorized domains`);
+      } else if (code.includes('popup-closed-by-user') || msg.includes('popup-closed-by-user')) {
+        setAuthError('หน้าต่างเข้าสู่ระบบถูกปิดก่อนเสร็จสิ้น');
+      } else if (code.includes('invalid-api-key') || msg.includes('invalid-api-key')) {
+        setAuthError('API Key ของ Firebase ไม่ถูกต้อง หรือไฟล์ .env ยังไม่ได้ถูกนำไป Build');
+      } else {
+        setAuthError(`เข้าสู่ระบบ Google ไม่สำเร็จ: ${code || msg}`);
+      }
+    } finally {
+      setIsLoggingIn(false);
+    }
   };
 
   const handleSpotify = async () => {
     sfx.click();
-    await signInSpotify();
-    onClose();
+    setAuthError(null);
+    setIsLoggingIn(true);
+    try {
+      await signInSpotify();
+      onClose();
+    } catch (err: any) {
+      console.error('Spotify Sign-In failed:', err);
+      setAuthError(`Spotify Error: ${err?.message || String(err)}`);
+    } finally {
+      setIsLoggingIn(false);
+    }
   };
 
   // Alternative redirect URI with/without trailing slash
@@ -172,6 +202,16 @@ export const AuthModal: React.FC<Props> = ({ isOpen, onClose }) => {
           ) : (
             /* Unauthenticated: Mandatory Sign In Options */
             <div className="space-y-3.5">
+              {authError && (
+                <div className="p-3.5 rounded-2xl bg-rose-950/80 border border-rose-500/40 text-xs text-rose-200 flex items-start gap-2.5 animate-shake">
+                  <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                  <div className="flex-1 leading-relaxed">
+                    <span className="font-bold text-rose-300">แจ้งเตือนการเข้าสู่ระบบ:</span>
+                    <p className="mt-0.5">{authError}</p>
+                  </div>
+                </div>
+              )}
+
               {/* Google Sign-in Button */}
               <button
                 onClick={handleGoogle}
