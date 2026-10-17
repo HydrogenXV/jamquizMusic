@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "spotiquiz-music"
-  }
+    "default": "jam-music-ea669"
+  },
+  "targets": {},
+  "etags": {}
 }
