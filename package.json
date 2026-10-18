@@ -2,7 +2,7 @@
   "name": "spotiquiz",
   "private": true,
   "version": "1.0.0",
-  "description": "SpotiQuiz — Real-Time Tactical Music Trivia Duel",
+  "description": "Jam!Quiz — Real-Time Tactical Music Trivia Duel",
   "type": "module",
   "scripts": {
     "dev": "concurrently -k -n server,web -c green,cyan \"tsx watch server/index.ts\" \"vite\"",

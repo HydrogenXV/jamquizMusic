@@ -28,7 +28,7 @@ export const HowToPlayModal: React.FC<Props> = ({ open, onClose }) => {
             </div>
             <div>
               <h2 className="text-lg font-black text-white flex items-center gap-2">
-                <span>{lang === 'th' ? 'วิธีการเล่น SpotiQuiz' : 'How to Play SpotiQuiz'}</span>
+                <span>{lang === 'th' ? 'วิธีการเล่น Jam!Quiz' : 'How to Play Jam!Quiz'}</span>
                 <span className="text-[10px] bg-spotify/20 text-spotify px-2 py-0.5 rounded-full uppercase tracking-wider font-mono">
                   Guide
                 </span>

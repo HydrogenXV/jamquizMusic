@@ -9,7 +9,9 @@ import { HowToPlayModal } from './components/HowToPlayModal';
 import { AuthModal } from './components/AuthModal';
 import { MusicPlayerWidget } from './components/MusicPlayerWidget';
 import { Footer } from './components/Footer';
+import { DebugModal } from './components/DebugModal';
 import { music, isAudioSuspended, unlockAudio } from './lib/audio';
+import { bgm } from './lib/bgm';
 
 import { HomeView } from './views/HomeView';
 import { LobbyView } from './views/LobbyView';
@@ -31,10 +33,23 @@ function AppContent() {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showHowToPlay, setShowHowToPlay] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
   const [audioSuspended, setAudioSuspended] = useState(false);
 
   // Mandatory login popup before accessing the app if unauthenticated
   const isAuthModalOpen = showAuth || (!user && !guestEntered);
+
+  // Global keyboard shortcut for Developer Command Center (Ctrl+Shift+D or ` or ~)
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey && e.shiftKey && (e.key === 'D' || e.key === 'd')) || e.key === '`' || e.key === '~') {
+        e.preventDefault();
+        setShowDebug((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Detect and prompt if browser suspended audio after page reload
   React.useEffect(() => {
@@ -44,8 +59,19 @@ function AppContent() {
     return () => clearInterval(id);
   }, [room?.phase]);
 
-  // Guarantee that background music stops completely when the match finishes or returns to lobby
+  // Synchronize background music (Jam!Quiz Radio) lifecycle:
+  // Plays on Home (!room) and Lobby (room.phase === 'lobby'),
+  // Pauses when match begins (countdown, playing, reveal, draft),
+  // Resumes seamlessly when match finishes (results, or back to lobby).
   React.useEffect(() => {
+    const isMatch =
+      room?.phase === 'countdown' ||
+      room?.phase === 'playing' ||
+      room?.phase === 'reveal' ||
+      room?.phase === 'draft';
+
+    bgm.setMatchActive(Boolean(isMatch));
+
     if (!room || room.phase === 'results' || room.phase === 'lobby') {
       music.stop();
     }
@@ -58,6 +84,7 @@ function AppContent() {
           unlockAudio();
           setAudioSuspended(false);
         }
+        bgm.resume();
       }}
       className="min-h-screen bg-ink text-white flex flex-col aurora relative"
     >
@@ -86,6 +113,7 @@ function AppContent() {
         onOpenLeaderboard={() => setShowLeaderboard(true)}
         onOpenHowToPlay={() => setShowHowToPlay(true)}
         onOpenAuth={() => setShowAuth(true)}
+        onOpenDebug={() => setShowDebug(true)}
       />
 
       {/* Toast Notifications */}
@@ -174,7 +202,14 @@ function AppContent() {
       />
 
       {/* Floating Bottom-Right Music Player Widget */}
-      <MusicPlayerWidget room={room} />
+      <MusicPlayerWidget room={room} onOpenDebug={() => setShowDebug(true)} />
+
+      {/* Developer Debug Mode Command Center */}
+      <DebugModal
+        open={showDebug}
+        onClose={() => setShowDebug(false)}
+        room={room}
+      />
 
       {/* Global Footer Credits */}
       <Footer />

@@ -12,12 +12,12 @@ export const Footer: React.FC = () => {
           </div>
           <div>
             <div className="font-black text-white flex items-center gap-2">
-              <span>Spoti<span className="text-spotify">Quiz</span></span>
+              <span>Jam!<span className="text-spotify">Quiz</span></span>
               <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-spotify/15 text-spotify border border-spotify/30 font-bold">
-                v0.3
+                v0.4
               </span>
               <span className="text-[10px] font-mono text-neutral-500">
-                build 18.10.26
+                build 18.10.26.2
               </span>
             </div>
             <p className="text-[11px] text-neutral-500 mt-0.5">

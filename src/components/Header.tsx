@@ -5,7 +5,7 @@ import { isSfxMuted, setSfxMuted, sfx } from '../lib/sfx';
 import { music } from '../lib/audio';
 import { useGame } from '../lib/net';
 import { useAuth } from '../lib/authContext';
-import { Volume2, VolumeX, Globe, Trophy, Sparkles, Sliders, BookOpen } from 'lucide-react';
+import { Volume2, VolumeX, Globe, Trophy, Sparkles, Sliders, BookOpen, Terminal } from 'lucide-react';
 import type { Lang } from '../../shared/types';
 
 interface Props {
@@ -13,9 +13,10 @@ interface Props {
   onOpenLeaderboard: () => void;
   onOpenHowToPlay: () => void;
   onOpenAuth: () => void;
+  onOpenDebug?: () => void;
 }
 
-export const Header: React.FC<Props> = ({ onOpenCompendium, onOpenLeaderboard, onOpenHowToPlay, onOpenAuth }) => {
+export const Header: React.FC<Props> = ({ onOpenCompendium, onOpenLeaderboard, onOpenHowToPlay, onOpenAuth, onOpenDebug }) => {
   const { lang, setLang, t } = useI18n();
   const { connected } = useGame();
   const { user } = useAuth();
@@ -52,17 +53,16 @@ export const Header: React.FC<Props> = ({ onOpenCompendium, onOpenLeaderboard, o
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xl font-black tracking-tight text-white flex items-center gap-1">
-            Spoti<span className="text-spotify">Quiz</span>
+            Jam!<span className="text-spotify">Quiz</span>
           </span>
-          <a
-            href="https://github.com/HydrogenXV"
-            target="_blank"
-            rel="noopener noreferrer"
-            title="Developed by HydrogenXV (Build 18.10.26)"
-            className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-spotify/15 text-spotify hover:bg-spotify/25 border border-spotify/30 font-bold transition-all cursor-pointer"
+          <button
+            onClick={() => onOpenDebug?.()}
+            title="Developed by HydrogenXV (v0.4 build 18.10.26.2) — Click to open Debug Center"
+            className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-spotify/15 text-spotify hover:bg-spotify/30 border border-spotify/30 font-bold transition-all cursor-pointer flex items-center gap-1"
           >
-            v0.3
-          </a>
+            <span>v0.4</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-spotify animate-ping" />
+          </button>
         </div>
       </div>
 
@@ -253,6 +253,21 @@ export const Header: React.FC<Props> = ({ onOpenCompendium, onOpenLeaderboard, o
             </div>
           )}
         </div>
+
+        {/* Developer Debug Center Button */}
+        {onOpenDebug && (
+          <button
+            onClick={() => {
+              sfx.click();
+              onOpenDebug();
+            }}
+            className="btn-ghost !p-2 rounded-xl text-neutral-400 hover:text-spotify flex items-center gap-1.5 text-xs font-bold border border-white/5 hover:border-spotify/30 transition-colors"
+            title="Open Developer Command Center (Debug Mode)"
+          >
+            <Terminal className="w-4 h-4 text-spotify" />
+            <span className="hidden xl:inline text-[10px] text-spotify font-mono font-bold">DEV</span>
+          </button>
+        )}
       </div>
     </header>
   );

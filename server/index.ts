@@ -27,18 +27,31 @@ const rooms = new Map<string, Room>();
 
 function newCode(): string {
   for (;;) {
-    const code = `SPOTI-${Math.floor(1000 + Math.random() * 9000)}`;
+    const code = `JAM-${Math.floor(1000 + Math.random() * 9000)}`;
     if (!rooms.has(code)) return code;
   }
 }
 function normalizeCode(raw: string): string {
   const s = raw.toUpperCase().replace(/[^A-Z0-9]/g, '');
-  const digits = s.replace(/^SPOTI/, '');
-  return `SPOTI-${digits}`;
+  const digits = s.replace(/^(JAM|SPOTI)/, '');
+  if (rooms.has(`JAM-${digits}`)) return `JAM-${digits}`;
+  if (rooms.has(`SPOTI-${digits}`)) return `SPOTI-${digits}`;
+  return `JAM-${digits}`;
 }
 
 // ───────── REST ─────────
-app.get('/api/health', (_req, res) => res.json({ ok: true, rooms: rooms.size }));
+app.get(['/health', '/api/health'], (_req, res) =>
+  res.json({
+    ok: true,
+    app: 'Jam!Quiz',
+    version: '0.4',
+    build: '18.10.26.2',
+    developer: 'HydrogenXV',
+    rooms: rooms.size,
+    uptimeSeconds: Math.round(process.uptime()),
+    timestamp: Date.now(),
+  })
+);
 
 app.get('/api/leaderboard', (req, res) => {
   const sort = (['score', 'accuracy', 'speed'].includes(String(req.query.sort)) ? req.query.sort : 'score') as SortKey;
@@ -160,4 +173,4 @@ setInterval(() => {
   });
 }, 20000);
 
-server.listen(PORT, () => console.log(`🎧 SpotiQuiz server on http://localhost:${PORT}`));
+server.listen(PORT, () => console.log(`🎧 Jam!Quiz server on http://localhost:${PORT}`));

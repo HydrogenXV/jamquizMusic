@@ -104,7 +104,7 @@ export const AuthModal: React.FC<Props> = ({ isOpen, onClose }) => {
               <h3 className="text-xl font-black text-white leading-tight">
                 {user
                   ? (lang === 'th' ? 'โปรไฟล์ของคุณ' : 'Your Profile')
-                  : (lang === 'th' ? 'เข้าสู่ระบบ SpotiQuiz' : 'Sign in to SpotiQuiz')}
+                  : (lang === 'th' ? 'เข้าสู่ระบบ Jam!Quiz' : 'Sign in to Jam!Quiz')}
               </h3>
               <p className="text-xs text-neutral-400 mt-0.5">
                 {user
