@@ -228,8 +228,8 @@ export const Header: React.FC<Props> = ({ onOpenCompendium, onOpenLeaderboard, o
               <div className="pt-2 border-t border-white/10 space-y-2">
                 <div className="flex items-center justify-between text-xs font-bold text-neutral-300">
                   <span className="flex items-center gap-1.5">
-                    <Activity className="w-3.5 h-3.5 text-spotify" />
-                    <span>Particle Visualizer</span>
+                    <Sparkles className="w-3.5 h-3.5 text-spotify" />
+                    <span>{lang === 'th' ? 'หิมะดาวตก (Falling Stars)' : 'Falling Stars Effect'}</span>
                   </span>
                   <button
                     onClick={() => visualizerSettings.setEnabled(!visConfig.enabled)}
@@ -246,7 +246,7 @@ export const Header: React.FC<Props> = ({ onOpenCompendium, onOpenLeaderboard, o
                 {visConfig.enabled && (
                   <div className="space-y-1.5 animate-fade-up">
                     <div className="flex items-center justify-between text-[11px] text-neutral-400">
-                      <span>{lang === 'th' ? 'ขนาดและความหนาแน่น Particle' : 'Particle Density & Size'}</span>
+                      <span>{lang === 'th' ? 'ความหนาแน่นและขนาดดาว' : 'Star Density & Size'}</span>
                       <span className="font-mono text-spotify font-bold">{visConfig.thickness.toFixed(1)}x</span>
                     </div>
 

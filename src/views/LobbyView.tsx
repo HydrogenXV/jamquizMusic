@@ -182,64 +182,63 @@ export const LobbyView: React.FC<Props> = ({ room, you }) => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-6 animate-fade-up">
-      {/* Top Banner: Room Code & Action buttons */}
-      <div className="glass-strong rounded-3xl p-5 md:p-6 border border-white/10 flex flex-wrap items-center justify-between gap-4 shadow-xl">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-spotify/20 border border-spotify/30 flex items-center justify-center text-3xl shadow-inner">
-            🎧
-          </div>
-          <div>
-            <div className="text-xs uppercase font-black tracking-wider text-neutral-400">
-              {t('roomCode')}
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="text-2xl md:text-3xl font-mono font-black text-white tracking-wider">
-                {room.code}
-              </span>
-              <button
-                onClick={copyRoomCode}
-                className="btn-ghost !py-1 !px-3 text-xs font-bold flex items-center gap-1.5"
-              >
-                {copied ? <Check className="w-3.5 h-3.5 text-spotify" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copied ? t('copied') : t('copy')}</span>
-              </button>
-            </div>
-          </div>
-        </div>
+    <>
+      {/* Fullscreen Falling Stars Audio Visualizer */}
+      <AmbientVisualizer />
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleLeave}
-            className="btn-ghost text-red-400 hover:text-red-300 hover:bg-red-500/10 border-red-500/20 text-xs font-bold"
-          >
-            <LogOut className="w-4 h-4" />
-            <span>{t('leaveRoom')}</span>
-          </button>
+      <div className="relative z-10 max-w-6xl mx-auto p-4 md:p-6 space-y-6 animate-fade-up">
+        {/* Top Banner: Room Code & Action buttons */}
+        <div className="glass-strong rounded-3xl p-5 md:p-6 border border-white/10 flex flex-wrap items-center justify-between gap-4 shadow-xl">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-spotify/20 border border-spotify/30 flex items-center justify-center text-3xl shadow-inner">
+              🎧
+            </div>
+            <div>
+              <div className="text-xs uppercase font-black tracking-wider text-neutral-400">
+                {t('roomCode')}
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-2xl md:text-3xl font-mono font-black text-white tracking-wider">
+                  {room.code}
+                </span>
+                <button
+                  onClick={copyRoomCode}
+                  className="btn-ghost !py-1 !px-3 text-xs font-bold flex items-center gap-1.5"
+                >
+                  {copied ? <Check className="w-3.5 h-3.5 text-spotify" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copied ? t('copied') : t('copy')}</span>
+                </button>
+              </div>
+            </div>
+          </div>
 
-          {isHost ? (
+          <div className="flex items-center gap-3">
             <button
-              onClick={handleStart}
-              className="btn-primary py-3 px-6 text-sm font-black shadow-lg shadow-spotify/30 flex items-center gap-2 cursor-pointer"
+              onClick={handleLeave}
+              className="btn-ghost text-red-400 hover:text-red-300 hover:bg-red-500/10 border-red-500/20 text-xs font-bold"
             >
-              <Play className="w-4 h-4 fill-black" />
-              <span>{t('startMatch')}</span>
+              <LogOut className="w-4 h-4" />
+              <span>{t('leaveRoom')}</span>
             </button>
-          ) : (
-            <div className="glass px-4 py-2.5 rounded-full text-xs font-bold text-neutral-400 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-spotify animate-ping" />
-              <span>{t('waitingHost')}</span>
-            </div>
-          )}
+
+            {isHost ? (
+              <button
+                onClick={handleStart}
+                className="btn-primary py-3 px-6 text-sm font-black shadow-lg shadow-spotify/30 flex items-center gap-2 cursor-pointer"
+              >
+                <Play className="w-4 h-4 fill-black" />
+                <span>{t('startMatch')}</span>
+              </button>
+            ) : (
+              <div className="glass px-4 py-2.5 rounded-full text-xs font-bold text-neutral-400 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-spotify animate-ping" />
+                <span>{t('waitingHost')}</span>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* Responsive Jam!Radio Ambient Visualizer (Lobby Match Settings) */}
-      <div className="w-full">
-        <AmbientVisualizer variant="banner" className="w-full h-16 md:h-20 rounded-2xl bg-white/[0.02] border border-white/5 shadow-inner" />
-      </div>
-
-      {/* Main Grid: Left Roster & Spotify Importer | Right Settings */}
+        {/* Main Grid: Left Roster & Spotify Importer | Right Settings */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Player Roster & Playlist details */}
         <div className="lg:col-span-5 space-y-6">
@@ -720,5 +719,6 @@ export const LobbyView: React.FC<Props> = ({ room, you }) => {
         isImporting={importing}
       />
     </div>
+  </>
   );
 };

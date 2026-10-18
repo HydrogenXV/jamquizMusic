@@ -4,26 +4,27 @@ import { visualizerSettings, type VisualizerConfig } from '../lib/visualizerSett
 
 interface Props {
   className?: string;
-  variant?: 'banner' | 'wave' | 'aura';
-  color?: string;
 }
 
-interface Particle {
+interface StarParticle {
   x: number;
   y: number;
-  vx: number;
-  vy: number;
+  baseVy: number;
+  swaySpeed: number;
+  swayAmp: number;
+  swayPhase: number;
+  rotation: number;
+  vRot: number;
   baseRadius: number;
+  spikes: number; // 4 for diamond sparkle, 5 for classic star
   color: string;
   glowColor: string;
+  twinklePhase: number;
+  twinkleSpeed: number;
   freqBucket: number;
-  phase: number;
 }
 
-export const AmbientVisualizer: React.FC<Props> = ({
-  className = 'w-full h-24 md:h-28',
-  color = '#1ed760',
-}) => {
+export const AmbientVisualizer: React.FC<Props> = ({ className = '' }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [config, setConfig] = useState<VisualizerConfig>(visualizerSettings.getConfig());
 
@@ -41,37 +42,75 @@ export const AmbientVisualizer: React.FC<Props> = ({
     if (!ctx) return;
 
     let animId: number;
-    const width = 800;
-    const height = 140;
+    let width = (canvas.width = window.innerWidth);
+    let height = (canvas.height = window.innerHeight);
 
-    // Generate dynamic audio-reactive particle swarm
-    const particleCount = Math.floor(40 + 35 * config.thickness);
+    const handleResize = () => {
+      if (!canvas) return;
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    };
+    window.addEventListener('resize', handleResize);
+
     const colorPalette = [
-      { fill: '#1ed760', glow: 'rgba(30, 215, 96, 0.65)' },    // Spotify Green
-      { fill: '#10b981', glow: 'rgba(16, 185, 129, 0.65)' },  // Emerald
-      { fill: '#38bdf8', glow: 'rgba(56, 189, 248, 0.65)' },   // Cyan
-      { fill: '#818cf8', glow: 'rgba(129, 140, 248, 0.60)' },  // Indigo
-      { fill: '#a855f7', glow: 'rgba(168, 85, 247, 0.60)' },   // Purple
+      { fill: '#ffffff', glow: 'rgba(255, 255, 255, 0.8)' },   // Diamond White Starlight
+      { fill: '#1ed760', glow: 'rgba(30, 215, 96, 0.8)' },     // Spotify Emerald
+      { fill: '#38bdf8', glow: 'rgba(56, 189, 248, 0.8)' },    // Celestial Cyan
+      { fill: '#fde047', glow: 'rgba(253, 224, 71, 0.8)' },    // Golden Starlight
+      { fill: '#c084fc', glow: 'rgba(192, 132, 252, 0.8)' },   // Lavender Stardust
+      { fill: '#6ee7b7', glow: 'rgba(110, 231, 183, 0.8)' },   // Mint
     ];
 
-    const particles: Particle[] = [];
-    for (let i = 0; i < particleCount; i++) {
-      const palette = colorPalette[i % colorPalette.length];
-      particles.push({
+    // Star density scaled by screen area & user thickness setting (ความหนา Effect)
+    const baseCount = Math.floor((width * height) / 13000);
+    const starCount = Math.max(35, Math.min(220, Math.floor(baseCount * (0.5 + config.thickness * 0.45))));
+
+    const stars: StarParticle[] = [];
+    for (let i = 0; i < starCount; i++) {
+      const palette = colorPalette[Math.floor(Math.random() * colorPalette.length)];
+      stars.push({
         x: Math.random() * width,
         y: Math.random() * height,
-        vx: (Math.random() - 0.5) * 0.9,
-        vy: (Math.random() - 0.5) * 0.6,
-        baseRadius: 1.8 + Math.random() * 2.8,
+        baseVy: 0.5 + Math.random() * 1.3, // Falling speed like snow
+        swaySpeed: 0.015 + Math.random() * 0.025,
+        swayAmp: 0.4 + Math.random() * 1.2,
+        swayPhase: Math.random() * Math.PI * 2,
+        rotation: Math.random() * Math.PI * 2,
+        vRot: (Math.random() - 0.5) * 0.03,
+        baseRadius: 2.2 + Math.random() * 4.2,
+        spikes: Math.random() > 0.35 ? 4 : 5, // Mix 4-point diamond sparkles & 5-point stars
         color: palette.fill,
         glowColor: palette.glow,
+        twinklePhase: Math.random() * Math.PI * 2,
+        twinkleSpeed: 0.03 + Math.random() * 0.05,
         freqBucket: Math.floor(Math.random() * 32),
-        phase: Math.random() * Math.PI * 2,
       });
     }
 
     const freqData = new Uint8Array(64);
     let time = 0;
+
+    // Helper: Draw sparkling star
+    const drawStar = (
+      cx: number,
+      cy: number,
+      spikes: number,
+      outerR: number,
+      innerR: number,
+      rot: number
+    ) => {
+      const step = Math.PI / spikes;
+      ctx.beginPath();
+      for (let i = 0; i < 2 * spikes; i++) {
+        const r = i % 2 === 0 ? outerR : innerR;
+        const angle = i * step + rot;
+        const x = cx + Math.cos(angle) * r;
+        const y = cy + Math.sin(angle) * r;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+    };
 
     const render = () => {
       animId = requestAnimationFrame(render);
@@ -89,81 +128,67 @@ export const AmbientVisualizer: React.FC<Props> = ({
       }
       energy = (energy / 32 / 255) * (isPlaying ? Math.max(0.3, vol) : 0.08);
 
-      time += isPlaying ? 0.02 + energy * 0.04 : 0.01;
-      const thickness = config.thickness; // 0.6 to 2.5
+      time += isPlaying ? 0.025 + energy * 0.03 : 0.015;
+      const thickness = config.thickness; // 0.6x to 2.5x
 
-      // 1. Central Cosmic Audio Nebula Glow
+      // Subtle atmospheric starlight vignette at top
       if (config.glow) {
         ctx.save();
-        const auraRadius = Math.min(width, height) * (0.6 + energy * thickness * 0.4);
-        const aura = ctx.createRadialGradient(width / 2, height / 2, 2, width / 2, height / 2, auraRadius);
-        aura.addColorStop(0, `rgba(30, 215, 96, ${0.15 * thickness * (energy + 0.2)})`);
-        aura.addColorStop(0.5, `rgba(56, 189, 248, ${0.08 * thickness * (energy + 0.1)})`);
-        aura.addColorStop(1, 'rgba(0, 0, 0, 0)');
-        ctx.fillStyle = aura;
-        ctx.fillRect(0, 0, width, height);
+        const topGlow = ctx.createLinearGradient(0, 0, 0, height * 0.4);
+        topGlow.addColorStop(0, `rgba(30, 215, 96, ${0.04 * thickness * (energy + 0.3)})`);
+        topGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = topGlow;
+        ctx.fillRect(0, 0, width, height * 0.4);
         ctx.restore();
       }
 
-      // 2. Update & Draw Constellation Links between nearby particles
-      const maxConnectDist = (65 + 25 * thickness);
-      ctx.save();
-      for (let i = 0; i < particles.length; i++) {
-        for (let j = i + 1; j < particles.length; j++) {
-          const dx = particles[i].x - particles[j].x;
-          const dy = particles[i].y - particles[j].y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
+      // Render Falling Stars (Snow-like gentle fall with starry sparkle)
+      stars.forEach((s) => {
+        const fVal = freqData[s.freqBucket] / 255;
+        const beatBoost = isPlaying ? (1 + energy * 1.5 + fVal * 2.0 * thickness) : 1;
 
-          if (dist < maxConnectDist) {
-            const alpha = (1 - dist / maxConnectDist) * (0.25 + energy * 0.6) * (thickness * 0.7);
-            ctx.beginPath();
-            ctx.moveTo(particles[i].x, particles[i].y);
-            ctx.lineTo(particles[j].x, particles[j].y);
-            ctx.strokeStyle = `rgba(30, 215, 96, ${Math.min(0.65, alpha)})`;
-            ctx.lineWidth = Math.max(0.7, 1.2 * thickness * (1 - dist / maxConnectDist));
-            ctx.stroke();
-          }
+        // Fall downwards like snow, with horizontal sway
+        const fallSpeed = (s.baseVy + (isPlaying ? fVal * 0.8 : 0)) * (0.8 + energy * 0.5) * (0.8 + thickness * 0.2);
+        s.y += fallSpeed;
+        s.x += Math.sin(time * s.swaySpeed * 10 + s.swayPhase) * s.swayAmp;
+        s.rotation += s.vRot * (1 + energy * 1.2);
+
+        // Wrap around seamlessly
+        if (s.y > height + 20) {
+          s.y = -20;
+          s.x = Math.random() * width;
         }
-      }
-      ctx.restore();
+        if (s.x < -20) s.x = width + 20;
+        if (s.x > width + 20) s.x = -20;
 
-      // 3. Render Particles with Reactive Halo & Frequency Pulse
-      particles.forEach((p) => {
-        // Frequency amplitude for this specific particle's bucket
-        const fVal = freqData[p.freqBucket] / 255;
-        const reactiveMultiplier = isPlaying ? (1 + fVal * 2.2 * thickness + energy * 1.5) : (1 + 0.2 * Math.sin(time + p.phase));
+        // Twinkle brightness modulation
+        const twinkle = Math.sin(time * s.twinkleSpeed * 10 + s.twinklePhase) * 0.3 + 0.7;
+        const currentAlpha = Math.min(1, Math.max(0.2, (twinkle * 0.6 + energy * 0.4) * (0.7 + thickness * 0.3)));
 
-        // Movement with audio-driven turbulence
-        const speedBoost = isPlaying ? (1 + energy * 1.8) : 0.8;
-        p.x += p.vx * speedBoost;
-        p.y += (p.vy - (isPlaying ? fVal * 0.4 : 0)) * speedBoost;
-
-        // Wrap around boundaries smoothly
-        if (p.x < -10) p.x = width + 10;
-        if (p.x > width + 10) p.x = -10;
-        if (p.y < -10) p.y = height + 10;
-        if (p.y > height + 10) p.y = -10;
-
-        const currentRadius = Math.max(1.2, p.baseRadius * thickness * 0.7 * reactiveMultiplier);
+        // Scale radius with beat and thickness
+        const outerRadius = Math.max(
+          1.8,
+          s.baseRadius * (0.7 + thickness * 0.35) * (1 + (isPlaying ? fVal * 1.2 * thickness : 0.1 * Math.sin(time + s.swayPhase)))
+        );
+        const innerRadius = s.spikes === 4 ? outerRadius * 0.26 : outerRadius * 0.42;
 
         ctx.save();
 
-        // Outer Particle Glow Halo
-        if (config.glow && currentRadius > 2.5) {
+        // Star Glow Halo (if star is large or during beat drop)
+        if (config.glow && outerRadius > 3.2) {
           ctx.beginPath();
-          ctx.arc(p.x, p.y, currentRadius * 2.2, 0, Math.PI * 2);
-          ctx.fillStyle = p.glowColor;
-          ctx.globalAlpha = Math.min(0.45, 0.15 * thickness + energy * 0.3);
+          ctx.arc(s.x, s.y, outerRadius * 1.8, 0, Math.PI * 2);
+          ctx.fillStyle = s.glowColor;
+          ctx.globalAlpha = Math.min(0.4, 0.12 * thickness + (isPlaying ? fVal * 0.25 : 0));
           ctx.fill();
         }
 
-        // Core Particle Orb
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, currentRadius, 0, Math.PI * 2);
-        ctx.fillStyle = p.color;
-        ctx.globalAlpha = Math.min(1, 0.55 + energy * 0.45);
-        ctx.shadowColor = p.color;
-        ctx.shadowBlur = Math.min(20, 8 * thickness * (1 + fVal));
+        // Draw Star Shape
+        ctx.fillStyle = s.color;
+        ctx.globalAlpha = currentAlpha;
+        ctx.shadowColor = s.color;
+        ctx.shadowBlur = Math.min(22, 5 * thickness * (1 + fVal * 2));
+        drawStar(s.x, s.y, s.spikes, outerRadius, innerRadius, s.rotation);
         ctx.fill();
 
         ctx.restore();
@@ -174,18 +199,17 @@ export const AmbientVisualizer: React.FC<Props> = ({
 
     return () => {
       cancelAnimationFrame(animId);
+      window.removeEventListener('resize', handleResize);
     };
-  }, [config.enabled, config.thickness, config.glow, color]);
+  }, [config.enabled, config.thickness, config.glow]);
 
   if (!config.enabled) return null;
 
   return (
-    <div className={`relative flex items-center justify-center overflow-hidden pointer-events-none select-none ${className}`}>
+    <div className={`fixed inset-0 pointer-events-none z-0 overflow-hidden select-none ${className}`}>
       <canvas
         ref={canvasRef}
-        width={800}
-        height={140}
-        className="w-full h-full object-contain filter drop-shadow-[0_0_16px_rgba(30,215,96,0.35)] transition-opacity duration-300"
+        className="w-full h-full object-cover filter drop-shadow-[0_0_12px_rgba(30,215,96,0.25)] transition-opacity duration-300"
       />
     </div>
   );

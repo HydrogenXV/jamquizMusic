@@ -58,26 +58,25 @@ export const HomeView: React.FC<Props> = ({ onOpenCompendium, onOpenLeaderboard,
   };
 
   return (
-    <div className="min-h-[calc(100vh-65px)] flex flex-col justify-between p-4 md:p-8 max-w-6xl mx-auto">
-      {/* Hero Section */}
-      <div className="text-center my-6 md:my-10 animate-fade-up">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-spotify/15 border border-spotify/30 text-spotify text-xs font-black uppercase tracking-wider mb-4">
-          <Sparkles className="w-3.5 h-3.5" />
-          {t('tagline')}
-        </div>
-        <h1 className="text-4xl md:text-6xl lg:text-7xl font-black tracking-tight text-white leading-tight">
-          {t('heroTitle1')} <br className="hidden sm:inline" />
-          <span className="text-gradient">{t('heroTitle2')}</span>
-        </h1>
-        <p className="mt-4 text-base md:text-lg text-neutral-400 max-w-2xl mx-auto font-medium">
-          {t('heroSub')}
-        </p>
+    <>
+      {/* Fullscreen Falling Stars Audio Visualizer */}
+      <AmbientVisualizer />
 
-        {/* Responsive Jam!Radio Ambient Visualizer (Home Hero) */}
-        <div className="mt-5 max-w-3xl mx-auto px-4">
-          <AmbientVisualizer variant="banner" className="w-full h-20 md:h-24 rounded-2xl bg-white/[0.02] border border-white/5 shadow-inner" />
+      <div className="relative z-10 min-h-[calc(100vh-65px)] flex flex-col justify-between p-4 md:p-8 max-w-6xl mx-auto">
+        {/* Hero Section */}
+        <div className="text-center my-6 md:my-10 animate-fade-up">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-spotify/15 border border-spotify/30 text-spotify text-xs font-black uppercase tracking-wider mb-4">
+            <Sparkles className="w-3.5 h-3.5" />
+            {t('tagline')}
+          </div>
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-black tracking-tight text-white leading-tight">
+            {t('heroTitle1')} <br className="hidden sm:inline" />
+            <span className="text-gradient">{t('heroTitle2')}</span>
+          </h1>
+          <p className="mt-4 text-base md:text-lg text-neutral-400 max-w-2xl mx-auto font-medium">
+            {t('heroSub')}
+          </p>
         </div>
-      </div>
 
       {/* Main Action Hub: Left (Profile & Join) + Right (Game Modes Showcase) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start my-4">
@@ -295,5 +294,6 @@ export const HomeView: React.FC<Props> = ({ onOpenCompendium, onOpenLeaderboard,
         </div>
       </div>
     </div>
+  </>
   );
 };
