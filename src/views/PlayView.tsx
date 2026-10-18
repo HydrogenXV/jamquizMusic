@@ -11,7 +11,8 @@ import { CardArt } from '../components/CardArt';
 import type { CardId, RoomState } from '../../shared/types';
 import {
   Zap, Clock, Flame, Shield, Radio, Sparkles, AlertCircle,
-  Mic, User, ChevronUp, ChevronDown, RotateCcw, LogOut
+  Mic, User, ChevronUp, ChevronDown, RotateCcw, LogOut,
+  Trophy, Crown, Medal, CheckCircle2, TrendingUp, X, Check
 } from 'lucide-react';
 
 interface Props {
@@ -20,7 +21,7 @@ interface Props {
 }
 
 export const PlayView: React.FC<Props> = ({ room, you }) => {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const round = room.round;
   const me = room.players.find((p) => p.id === you);
   const priv = room.me;
@@ -31,9 +32,15 @@ export const PlayView: React.FC<Props> = ({ room, you }) => {
   const [targetCard, setTargetCard] = useState<CardId | null>(null);
   const [micActive, setMicActive] = useState(false);
   const [micScoreBonus, setMicScoreBonus] = useState(0);
-  const [showFeed, setShowFeed] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [confirmRematch, setConfirmRematch] = useState(false);
+
+  // Real-time ranking calculation
+  const sortedPlayers = [...room.players].sort((a, b) => b.score - a.score);
+  const myRank = sortedPlayers.findIndex((p) => p.id === you) + 1;
+  const leader = sortedPlayers[0];
+  const scoreDiff = leader && me && leader.id !== me.id ? leader.score - me.score : 0;
 
   // Audio Playback Lifecycle
   useEffect(() => {
@@ -267,8 +274,40 @@ export const PlayView: React.FC<Props> = ({ room, you }) => {
             )}
           </div>
 
-          {/* Player Score, Streak & Match Actions */}
-          <div className="flex items-center gap-3">
+          {/* Player Rank, Score, Streak & Match Actions */}
+          <div className="flex items-center gap-2.5">
+            {/* Realtime Rank Badge Pill */}
+            <button
+              onClick={() => {
+                sfx.click();
+                setShowLeaderboard(true);
+              }}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-2xl border transition-all cursor-pointer shadow-md ${
+                myRank === 1
+                  ? 'bg-yellow-500/20 border-yellow-400/50 text-yellow-300 shadow-yellow-500/20'
+                  : myRank === 2
+                  ? 'bg-slate-400/20 border-slate-300/40 text-slate-200 shadow-slate-400/10'
+                  : myRank === 3
+                  ? 'bg-amber-700/20 border-amber-600/40 text-amber-300 shadow-amber-700/10'
+                  : 'bg-white/5 border-white/10 text-neutral-300 hover:bg-white/10'
+              }`}
+              title={lang === 'th' ? 'คลิกดูตารางอันดับคะแนน Real-time' : 'Click to view live match leaderboard'}
+            >
+              {myRank === 1 ? (
+                <Crown className="w-4 h-4 text-yellow-400 fill-yellow-400 animate-bounce" />
+              ) : (
+                <Trophy className="w-3.5 h-3.5 text-spotify" />
+              )}
+              <span className="font-black text-xs">
+                {lang === 'th' ? `อันดับ #${myRank}` : `Rank #${myRank}`}
+              </span>
+              {scoreDiff > 0 && (
+                <span className="text-[10px] text-neutral-400 font-mono hidden md:inline">
+                  (-{scoreDiff.toLocaleString()})
+                </span>
+              )}
+            </button>
+
             {me && me.streak >= 2 && (
               <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-orange-500/20 border border-orange-500/30 text-orange-400 font-black text-xs animate-bounce">
                 <Flame className="w-3.5 h-3.5 fill-orange-400" />
@@ -332,6 +371,73 @@ export const PlayView: React.FC<Props> = ({ room, you }) => {
             }`}
             style={{ width: `${timePct}%` }}
           />
+        </div>
+
+        {/* Real-time In-Game Player Standings Bar */}
+        <div className="pt-2 border-t border-white/10">
+          <div className="flex items-center justify-between text-[11px] font-black uppercase tracking-wider text-neutral-400 mb-1.5">
+            <span className="flex items-center gap-1.5 text-spotify">
+              <Trophy className="w-3.5 h-3.5" />
+              <span>{lang === 'th' ? 'อันดับสดในเกม (Live Standings)' : 'Live Match Standings'}</span>
+            </span>
+            <button
+              onClick={() => {
+                sfx.click();
+                setShowLeaderboard(true);
+              }}
+              className="text-[10px] text-neutral-400 hover:text-white flex items-center gap-1 cursor-pointer font-bold transition-colors"
+            >
+              <span>{lang === 'th' ? 'ดูตารางเต็ม' : 'Full Table'}</span>
+              <span>({room.players.length} {lang === 'th' ? 'คน' : 'players'})</span>
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
+            {sortedPlayers.map((p, idx) => {
+              const rank = idx + 1;
+              const isMe = p.id === you;
+              const rankMedal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`;
+
+              return (
+                <div
+                  key={p.id}
+                  onClick={() => {
+                    sfx.click();
+                    setShowLeaderboard(true);
+                  }}
+                  className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl border shrink-0 transition-all cursor-pointer ${
+                    isMe
+                      ? 'bg-spotify/20 border-spotify/50 text-white shadow-md shadow-spotify/20 ring-1 ring-spotify/40'
+                      : 'bg-white/5 border-white/10 text-neutral-300 hover:bg-white/10'
+                  }`}
+                  title={`${p.name}: ${p.score.toLocaleString()} pts (${p.hasAnswered ? 'ตอบแล้ว' : 'กำลังคิด'})`}
+                >
+                  <span className="font-mono font-black text-xs shrink-0">{rankMedal}</span>
+                  <span className="text-base shrink-0">{p.avatar}</span>
+                  <div className="flex flex-col text-left">
+                    <div className="flex items-center gap-1">
+                      <span className={`text-xs font-bold truncate max-w-[80px] ${isMe ? 'text-spotify' : 'text-white'}`}>
+                        {p.name}
+                      </span>
+                      {p.hasAnswered ? (
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399]" title="ตอบแล้ว (Answered)" />
+                      ) : (
+                        <span className="w-2 h-2 rounded-full bg-amber-400/80 animate-ping" title="กำลังคิด... (Thinking...)" />
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[10px] font-mono leading-none mt-0.5">
+                      <span className="text-emerald-400 font-bold">{p.score.toLocaleString()}</span>
+                      {p.streak >= 2 && (
+                        <span className="text-orange-400 font-bold flex items-center">
+                          🔥{p.streak}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -619,6 +725,141 @@ export const PlayView: React.FC<Props> = ({ room, you }) => {
             >
               {t('close')}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Real-time Match Leaderboard Modal */}
+      {showLeaderboard && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-up">
+          <div className="glass-strong rounded-3xl max-w-lg w-full p-5 md:p-6 border border-white/15 shadow-2xl relative bg-neutral-950/95 space-y-4">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-spotify/20 border border-spotify/40 flex items-center justify-center text-spotify shadow-inner">
+                  <Trophy className="w-5 h-5 text-spotify" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-white flex items-center gap-2">
+                    <span>{lang === 'th' ? 'อันดับคะแนน Real-time' : 'Live Match Leaderboard'}</span>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-spotify/20 text-spotify uppercase font-bold">
+                      Round {round.index + 1}/{round.total}
+                    </span>
+                  </h3>
+                  <p className="text-xs text-neutral-400">
+                    {lang === 'th'
+                      ? `คุณอยู่อันดับที่ #${myRank} จากทั้งหมด ${sortedPlayers.length} คน`
+                      : `You are currently in Rank #${myRank} of ${sortedPlayers.length}`}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowLeaderboard(false)}
+                className="p-1.5 rounded-full text-neutral-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                title="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Players Table */}
+            <div className="space-y-2 max-h-[55vh] overflow-y-auto pr-1">
+              {sortedPlayers.map((p, idx) => {
+                const rank = idx + 1;
+                const isMe = p.id === you;
+                const diffFromLeader = leader ? leader.score - p.score : 0;
+
+                return (
+                  <div
+                    key={p.id}
+                    className={`p-3 rounded-2xl border flex items-center justify-between transition-all ${
+                      isMe
+                        ? 'bg-spotify/15 border-spotify/50 shadow-md shadow-spotify/10 ring-1 ring-spotify/30'
+                        : 'bg-white/5 border-white/5 hover:bg-white/10'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      {/* Rank Medal */}
+                      <div className="w-8 h-8 rounded-xl flex items-center justify-center font-black font-mono text-sm shrink-0">
+                        {rank === 1 ? (
+                          <span className="text-2xl animate-bounce">🥇</span>
+                        ) : rank === 2 ? (
+                          <span className="text-2xl">🥈</span>
+                        ) : rank === 3 ? (
+                          <span className="text-2xl">🥉</span>
+                        ) : (
+                          <span className="text-neutral-400 font-bold">#{rank}</span>
+                        )}
+                      </div>
+
+                      {/* Avatar & Details */}
+                      <div className="text-2xl shrink-0">{p.avatar}</div>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className={`text-sm font-black ${isMe ? 'text-spotify' : 'text-white'}`}>
+                            {p.name}
+                          </span>
+                          {isMe && (
+                            <span className="text-[9px] px-1.5 py-0.2 rounded bg-spotify text-black font-black uppercase tracking-wider">
+                              {lang === 'th' ? 'คุณ' : 'YOU'}
+                            </span>
+                          )}
+                          {p.isHost && (
+                            <span title="Host">
+                              <Crown className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Status Tags */}
+                        <div className="flex items-center gap-2 mt-0.5 text-xs text-neutral-400">
+                          {p.hasAnswered ? (
+                            <span className="text-emerald-400 font-bold flex items-center gap-1">
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>{lang === 'th' ? 'ตอบแล้ว' : 'Answered'}</span>
+                            </span>
+                          ) : (
+                            <span className="text-amber-400/90 font-medium flex items-center gap-1">
+                              <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                              <span>{lang === 'th' ? 'กำลังคิดคำตอบ...' : 'Thinking...'}</span>
+                            </span>
+                          )}
+
+                          {p.streak >= 2 && (
+                            <span className="text-orange-400 font-bold flex items-center gap-0.5">
+                              <Flame className="w-3 h-3 fill-orange-400" />
+                              <span>{p.streak}×</span>
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Score & Points Diff */}
+                    <div className="text-right">
+                      <div className="text-base font-mono font-black text-emerald-400">
+                        {p.score.toLocaleString()} <span className="text-xs font-normal text-neutral-400">pts</span>
+                      </div>
+                      {rank > 1 && (
+                        <div className="text-[10px] text-neutral-400 font-mono">
+                          -{diffFromLeader.toLocaleString()}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Footer */}
+            <div className="pt-2">
+              <button
+                onClick={() => setShowLeaderboard(false)}
+                className="btn-primary w-full py-2.5 text-xs font-black cursor-pointer shadow-lg shadow-spotify/20"
+              >
+                {lang === 'th' ? 'กลับไปหน้าคำถาม' : 'Back to Match'}
+              </button>
+            </div>
           </div>
         </div>
       )}

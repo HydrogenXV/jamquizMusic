@@ -158,45 +158,61 @@ export const RevealView: React.FC<Props> = ({ room, you }) => {
         </h4>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {room.players.map((p) => {
-            const res = reveal.results[p.id];
-            return (
-              <div
-                key={p.id}
-                className="p-3 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-between"
-              >
-                <div className="flex items-center gap-2.5">
-                  <span className="text-xl">{p.avatar}</span>
-                  <div>
-                    <div className="text-xs font-bold text-white flex items-center gap-1">
-                      <span>{p.name}</span>
-                      {res?.correct ? (
-                        <span className="text-emerald-400 text-[10px]">✓</span>
-                      ) : (
-                        <span className="text-rose-400 text-[10px]">✗</span>
+          {[...room.players]
+            .sort((a, b) => b.score - a.score)
+            .map((p, idx) => {
+              const rank = idx + 1;
+              const res = reveal.results[p.id];
+              const isMe = p.id === you;
+              const rankMedal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`;
+
+              return (
+                <div
+                  key={p.id}
+                  className={`p-3 rounded-2xl border flex items-center justify-between transition-all ${
+                    isMe
+                      ? 'bg-spotify/15 border-spotify/40 shadow-md shadow-spotify/10'
+                      : 'bg-white/5 border-white/5'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <span className="font-mono font-black text-xs shrink-0 w-6 text-center">{rankMedal}</span>
+                    <span className="text-xl shrink-0">{p.avatar}</span>
+                    <div>
+                      <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                        <span className={isMe ? 'text-spotify font-black' : ''}>{p.name}</span>
+                        {isMe && (
+                          <span className="text-[9px] px-1 rounded bg-spotify text-black font-black uppercase">
+                            YOU
+                          </span>
+                        )}
+                        {res?.correct ? (
+                          <span className="text-emerald-400 text-xs font-black">✓</span>
+                        ) : (
+                          <span className="text-rose-400 text-xs font-black">✗</span>
+                        )}
+                      </div>
+                      {p.streak >= 2 && (
+                        <span className="text-[10px] text-orange-400 font-bold flex items-center gap-0.5">
+                          🔥 {p.streak}× {t('streak')}
+                        </span>
                       )}
                     </div>
-                    {p.streak >= 2 && (
-                      <span className="text-[10px] text-orange-400 font-bold">
-                        {p.streak}× {t('streak')}
+                  </div>
+
+                  <div className="text-right">
+                    <span className="font-mono font-bold text-xs text-white">
+                      {p.score.toLocaleString()} pts
+                    </span>
+                    {res && res.points > 0 && (
+                      <span className="text-[10px] text-emerald-400 block font-mono font-bold">
+                        +{res.points.toLocaleString()}
                       </span>
                     )}
                   </div>
                 </div>
-
-                <div className="text-right">
-                  <span className="font-mono font-bold text-xs text-white">
-                    {p.score.toLocaleString()} pts
-                  </span>
-                  {res && res.points > 0 && (
-                    <span className="text-[10px] text-emerald-400 block font-mono">
-                      +{res.points}
-                    </span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
         </div>
       </div>
     </div>
