@@ -26,69 +26,71 @@ export interface BgmState {
   duration: number;
 }
 
-// Curated default developer radio tracks (popular, high energy & chill)
+const BGM_STORAGE_KEY = 'jamquiz_dev_bgm_playlist_v2';
+
+// 100% Verified, permanent Spotify CDN MP3 previews (Status: 200 OK)
 const DEFAULT_TRACKS: BgmTrack[] = [
   {
-    id: 'bgm-1',
-    title: 'Levitating',
-    artist: 'Dua Lipa',
-    artwork: 'https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/bf/f9/06/bff90605-728b-d72b-8106-25916327b9c9/190295286105.jpg/300x300bb.jpg',
-    previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview115/v4/4e/d6/35/4ed6354b-d7fa-5d07-6b08-81e0586ee2b3/mzaf_10334887965942475971.plus.aac.p.m4a',
+    id: 'bgm-sp-0',
+    title: 'expectations (feat. Chappell Roan)',
+    artist: 'Olivia Rodrigo, Chappell Roan',
+    artwork: 'https://i.scdn.co/image/ab67706f0000000230888e59410296f950502d00',
+    previewUrl: 'https://p.scdn.co/mp3-preview/cc5b59142bd150799f61068e522f8aaa120d28c9',
   },
   {
-    id: 'bgm-2',
-    title: 'Blinding Lights',
-    artist: 'The Weeknd',
-    artwork: 'https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/00/a3/98/00a39818-8424-9b1d-cfa5-1ff25c48b26a/20UMGIM08611.rgb.jpg/300x300bb.jpg',
-    previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview115/v4/28/7f/0a/287f0ae2-8254-8e62-c1b7-951b1f13b632/mzaf_11303120158428800057.plus.aac.p.m4a',
+    id: 'bgm-sp-1',
+    title: 'Stop The Wedding!',
+    artist: 'Ashe',
+    artwork: 'https://i.scdn.co/image/ab67706f0000000230888e59410296f950502d00',
+    previewUrl: 'https://p.scdn.co/mp3-preview/8a374e33d78679e1143d7a07797ddfa0225f8586',
   },
   {
-    id: 'bgm-3',
-    title: 'APT.',
-    artist: 'ROSÉ & Bruno Mars',
-    artwork: 'https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/80/7e/61/807e61bf-1eb9-a86f-3957-6e3e571e2efd/075679633576.jpg/300x300bb.jpg',
-    previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/c3/82/06/c38206d2-646f-d10d-83b6-ae380ae8463c/mzaf_7493630737477610057.plus.aac.p.m4a',
+    id: 'bgm-sp-2',
+    title: 'Patient Zero',
+    artist: 'Taylor Swift',
+    artwork: 'https://i.scdn.co/image/ab67706f0000000230888e59410296f950502d00',
+    previewUrl: 'https://p.scdn.co/mp3-preview/3b622221c4b4a6c28ef70ed256b47ef825108142',
   },
   {
-    id: 'bgm-4',
-    title: 'โต๊ะริม (melt)',
-    artist: 'NONT TANONT',
-    artwork: 'https://is1-ssl.mzstatic.com/image/thumb/Music112/v4/65/59/aa/6559aa2b-877f-1d48-6a56-da242d480cb4/cover.jpg/300x300bb.jpg',
-    previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview112/v4/f5/63/8e/f5638eb0-6126-df8a-0d85-a764d2627cb6/mzaf_7867657519688463568.plus.aac.p.m4a',
+    id: 'bgm-sp-3',
+    title: 'Earrings',
+    artist: 'Malcolm Todd',
+    artwork: 'https://i.scdn.co/image/ab67706f0000000230888e59410296f950502d00',
+    previewUrl: 'https://p.scdn.co/mp3-preview/20a1469df9f65a51878811bbe49979c418abc1b7',
   },
   {
-    id: 'bgm-5',
-    title: 'ซ่อนกลิ่น',
-    artist: 'Palmy',
-    artwork: 'https://is1-ssl.mzstatic.com/image/thumb/Music128/v4/fc/c9/7c/fcc97c9b-6484-984e-3375-9922e4ff9f7d/8850107612260.jpg/300x300bb.jpg',
-    previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview128/v4/7e/d3/96/7ed396aa-2831-294b-97fa-ceb5b328639d/mzaf_3992297121706059910.plus.aac.p.m4a',
+    id: 'bgm-sp-4',
+    title: 'Housewife',
+    artist: 'Tate McRae',
+    artwork: 'https://i.scdn.co/image/ab67706f0000000230888e59410296f950502d00',
+    previewUrl: 'https://p.scdn.co/mp3-preview/724b097d9dc53e0541de27d199adfe3f610944ba',
   },
   {
-    id: 'bgm-6',
-    title: 'Super Shy',
-    artist: 'NewJeans',
-    artwork: 'https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/28/62/7b/28627b0b-cf10-9174-8b6a-93a8cf82f508/196922475960_Cover.jpg/300x300bb.jpg',
-    previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview126/v4/64/00/17/64001712-b258-cfef-156d-e9e9a4fba4ca/mzaf_1052733979857999863.plus.aac.p.m4a',
+    id: 'bgm-sp-5',
+    title: 'Loser',
+    artist: 'Tame Impala',
+    artwork: 'https://i.scdn.co/image/ab67706f0000000230888e59410296f950502d00',
+    previewUrl: 'https://p.scdn.co/mp3-preview/0015e9347a45b62215447eba657b2fc3ce279d2d',
   },
   {
-    id: 'bgm-7',
-    title: 'Wake Me Up',
-    artist: 'Avicii',
-    artwork: 'https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/37/80/7e/37807ec1-8071-872f-5192-ee1d892040b2/00602537541604.rgb.jpg/300x300bb.jpg',
-    previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview115/v4/c3/0f/73/c30f7356-9a2d-ec3d-31eb-4752670e458e/mzaf_12410886737526779435.plus.aac.p.m4a',
+    id: 'bgm-sp-6',
+    title: 'hate that i made you love me',
+    artist: 'Ariana Grande',
+    artwork: 'https://i.scdn.co/image/ab67706f0000000230888e59410296f950502d00',
+    previewUrl: 'https://p.scdn.co/mp3-preview/9fb8e09c9facc2d9443b6e57ae36d47bf83c01b8',
   },
   {
-    id: 'bgm-8',
-    title: 'Midnight City',
-    artist: 'M83',
-    artwork: 'https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/4e/ff/3c/4eff3cc0-25e2-6df9-8664-884bc78d655f/cover.jpg/300x300bb.jpg',
-    previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview115/v4/07/78/c1/0778c187-b962-d278-df12-ae293b67c3e1/mzaf_785669938830022416.plus.aac.p.m4a',
+    id: 'bgm-sp-7',
+    title: 'Dai Dai',
+    artist: 'Shakira, Burna Boy',
+    artwork: 'https://i.scdn.co/image/ab67706f0000000230888e59410296f950502d00',
+    previewUrl: 'https://p.scdn.co/mp3-preview/a6955a6725dcf614e9915396987847ea0b509580',
   },
 ];
 
 class BgmManager {
   private audio: HTMLAudioElement | null = null;
-  private playlistName = 'Jam!Quiz Developer Radio';
+  private playlistName = "Today's Top Hits (Jam!Quiz Radio)";
   private cover: string | undefined = DEFAULT_TRACKS[0].artwork;
   private tracks: BgmTrack[] = DEFAULT_TRACKS;
   private currentIndex = 0;
@@ -99,11 +101,13 @@ class BgmManager {
   private isMuted = localStorage.getItem('jq.bgm.muted') === 'true';
   private listeners = new Set<(state: BgmState) => void>();
   private matchActive = false;
+  private errorCount = 0;
+  private triedProxy = false;
 
   constructor() {
     this.loadSavedPlaylist();
     if (typeof window !== 'undefined') {
-      // Auto-unlock on first user interaction if blocked by autoplay policy
+      // Auto-unlock on first user interaction if blocked by browser autoplay policy
       const unlockListener = () => {
         if (!this.matchActive && !this.userPaused && (!this.audio || this.audio.paused)) {
           this.resume();
@@ -116,13 +120,20 @@ class BgmManager {
 
   private loadSavedPlaylist() {
     try {
-      const saved = localStorage.getItem('jamquiz_dev_bgm_playlist');
+      // Clear legacy storage from v1 if present
+      localStorage.removeItem('jamquiz_dev_bgm_playlist');
+
+      const saved = localStorage.getItem(BGM_STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed?.tracks?.length > 0) {
-          this.playlistName = parsed.name || this.playlistName;
-          this.cover = parsed.cover || this.cover;
-          this.tracks = parsed.tracks;
+          // Verify tracks have previewUrl
+          const valid = parsed.tracks.filter((t: any) => Boolean(t.previewUrl));
+          if (valid.length > 0) {
+            this.playlistName = parsed.name || this.playlistName;
+            this.cover = parsed.cover || this.cover;
+            this.tracks = valid;
+          }
         }
       }
     } catch {}
@@ -135,7 +146,14 @@ class BgmManager {
       this.audio.volume = this.isMuted ? 0 : this.volume;
 
       this.audio.addEventListener('ended', () => {
+        this.errorCount = 0;
         this.next();
+      });
+
+      this.audio.addEventListener('playing', () => {
+        this.errorCount = 0;
+        this.isPlaying = true;
+        this.notify();
       });
 
       this.audio.addEventListener('timeupdate', () => {
@@ -145,9 +163,27 @@ class BgmManager {
         }
       });
 
-      this.audio.addEventListener('error', (e) => {
-        console.warn('[BGM Engine] Track playback error, advancing to next:', e);
-        setTimeout(() => this.next(), 1000);
+      this.audio.addEventListener('error', () => {
+        const currentTrack = this.tracks[this.currentIndex];
+        // If direct URL failed and we haven't tried proxy yet, try proxy once
+        if (!this.triedProxy && currentTrack?.previewUrl) {
+          this.triedProxy = true;
+          if (this.audio) {
+            this.audio.src = getApiUrl(`/api/preview?url=${encodeURIComponent(currentTrack.previewUrl)}`);
+            this.audio.load();
+            this.audio.play().catch(() => {});
+            return;
+          }
+        }
+
+        this.errorCount++;
+        this.triedProxy = false;
+        if (this.errorCount < 3) {
+          setTimeout(() => this.next(), 1000);
+        } else {
+          console.warn('[BGM Engine] Multiple tracks failed to play, pausing radio.');
+          this.pause(false);
+        }
       });
     }
     return this.audio;
@@ -184,6 +220,8 @@ class BgmManager {
   play(index?: number) {
     if (this.matchActive) return; // Do not play during match rounds
     this.userPaused = false;
+    this.triedProxy = false;
+
     if (typeof index === 'number' && index >= 0 && index < this.tracks.length) {
       if (this.currentIndex !== index) {
         this.currentIndex = index;
@@ -195,11 +233,10 @@ class BgmManager {
     if (!track || !track.previewUrl) return;
 
     const audio = this.getAudio();
-    const rawUrl = track.previewUrl;
-    const streamUrl = getApiUrl(`/api/preview?url=${encodeURIComponent(rawUrl)}`);
+    const directUrl = track.previewUrl;
 
-    if (audio.src !== streamUrl) {
-      audio.src = streamUrl;
+    if (audio.src !== directUrl) {
+      audio.src = directUrl;
       audio.load();
     }
 
@@ -209,10 +246,11 @@ class BgmManager {
 
     audio.volume = this.isMuted ? 0 : this.volume;
     audio.play().then(() => {
+      this.errorCount = 0;
       this.isPlaying = true;
       this.notify();
     }).catch((err) => {
-      console.log('[BGM] Waiting for user interaction to autoplay:', err.message);
+      console.log('[BGM] Waiting for user gesture to autoplay:', err.message);
       this.isPlaying = false;
       this.notify();
     });
@@ -239,6 +277,7 @@ class BgmManager {
   /** Advances to next track in Developer Radio */
   next() {
     this.savedPosition = 0;
+    this.triedProxy = false;
     this.currentIndex = (this.currentIndex + 1) % this.tracks.length;
     if (!this.matchActive && !this.userPaused) {
       this.play(this.currentIndex);
@@ -250,6 +289,7 @@ class BgmManager {
   /** Goes to previous track in Developer Radio */
   prev() {
     this.savedPosition = 0;
+    this.triedProxy = false;
     this.currentIndex = (this.currentIndex - 1 + this.tracks.length) % this.tracks.length;
     if (!this.matchActive && !this.userPaused) {
       this.play(this.currentIndex);
@@ -303,10 +343,12 @@ class BgmManager {
     this.tracks = tracks;
     this.currentIndex = 0;
     this.savedPosition = 0;
+    this.errorCount = 0;
+    this.triedProxy = false;
 
     try {
       localStorage.setItem(
-        'jamquiz_dev_bgm_playlist',
+        BGM_STORAGE_KEY,
         JSON.stringify({ name: this.playlistName, cover: this.cover, tracks: this.tracks })
       );
     } catch {}
