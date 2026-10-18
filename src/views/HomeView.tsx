@@ -6,6 +6,7 @@ import { useAuth } from '../lib/authContext';
 import { AVATARS, MODE_IDS, MODES } from '../../shared/game';
 import { Play, LogIn, Sparkles, Music, Mic, Zap, Shield, Clock, CheckCircle2 } from 'lucide-react';
 import type { ModeId } from '../../shared/types';
+import { AmbientVisualizer } from '../components/AmbientVisualizer';
 
 interface Props {
   onOpenCompendium: () => void;
@@ -71,6 +72,11 @@ export const HomeView: React.FC<Props> = ({ onOpenCompendium, onOpenLeaderboard,
         <p className="mt-4 text-base md:text-lg text-neutral-400 max-w-2xl mx-auto font-medium">
           {t('heroSub')}
         </p>
+
+        {/* Responsive Jam!Radio Ambient Visualizer (Home Hero) */}
+        <div className="mt-5 max-w-3xl mx-auto px-4">
+          <AmbientVisualizer variant="banner" className="w-full h-20 md:h-24 rounded-2xl bg-white/[0.02] border border-white/5 shadow-inner" />
+        </div>
       </div>
 
       {/* Main Action Hub: Left (Profile & Join) + Right (Game Modes Showcase) */}

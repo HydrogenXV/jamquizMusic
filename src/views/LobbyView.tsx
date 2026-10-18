@@ -7,6 +7,7 @@ import { useAuth } from '../lib/authContext';
 import { getSpotifyToken } from '../lib/spotifyAuth';
 import { SpotifyPlaylistModal } from '../components/SpotifyPlaylistModal';
 import { CARD_IDS, CARDS, GENRES, MODE_IDS, MODES } from '../../shared/game';
+import { AmbientVisualizer } from '../components/AmbientVisualizer';
 import type { AskType, CardId, GenreId, ModeId, QuestionType, RoomState } from '../../shared/types';
 import {
   Copy, Check, Bot, UserX, Crown, Play, LogOut, Settings, Music,
@@ -231,6 +232,11 @@ export const LobbyView: React.FC<Props> = ({ room, you }) => {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Responsive Jam!Radio Ambient Visualizer (Lobby Match Settings) */}
+      <div className="w-full">
+        <AmbientVisualizer variant="banner" className="w-full h-16 md:h-20 rounded-2xl bg-white/[0.02] border border-white/5 shadow-inner" />
       </div>
 
       {/* Main Grid: Left Roster & Spotify Importer | Right Settings */}

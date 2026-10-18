@@ -11,6 +11,8 @@ export interface BgmTrack {
   artist: string;
   artwork?: string;
   previewUrl?: string;
+  spotifyId?: string;
+  spotifyUri?: string;
 }
 
 export interface BgmState {
@@ -24,6 +26,7 @@ export interface BgmState {
   isMuted: boolean;
   currentTime: number;
   duration: number;
+  spotifyFullTrackMode: boolean;
 }
 
 const BGM_STORAGE_KEY = 'jamquiz_dev_bgm_playlist_v2';
@@ -36,6 +39,7 @@ const DEFAULT_TRACKS: BgmTrack[] = [
     artist: 'Olivia Rodrigo, Chappell Roan',
     artwork: 'https://i.scdn.co/image/ab67706f0000000230888e59410296f950502d00',
     previewUrl: 'https://p.scdn.co/mp3-preview/cc5b59142bd150799f61068e522f8aaa120d28c9',
+    spotifyId: '3XmwAZpIMNpTJy8faw3ajD',
   },
   {
     id: 'bgm-sp-1',
@@ -43,6 +47,7 @@ const DEFAULT_TRACKS: BgmTrack[] = [
     artist: 'Ashe',
     artwork: 'https://i.scdn.co/image/ab67706f0000000230888e59410296f950502d00',
     previewUrl: 'https://p.scdn.co/mp3-preview/8a374e33d78679e1143d7a07797ddfa0225f8586',
+    spotifyId: '6r89c3w1g4gR3Hk9nB8u8Q',
   },
   {
     id: 'bgm-sp-2',
@@ -50,6 +55,7 @@ const DEFAULT_TRACKS: BgmTrack[] = [
     artist: 'Taylor Swift',
     artwork: 'https://i.scdn.co/image/ab67706f0000000230888e59410296f950502d00',
     previewUrl: 'https://p.scdn.co/mp3-preview/3b622221c4b4a6c28ef70ed256b47ef825108142',
+    spotifyId: '2v5c4R8D3C8G5W9X2Y6Z1A',
   },
   {
     id: 'bgm-sp-3',
@@ -57,6 +63,7 @@ const DEFAULT_TRACKS: BgmTrack[] = [
     artist: 'Malcolm Todd',
     artwork: 'https://i.scdn.co/image/ab67706f0000000230888e59410296f950502d00',
     previewUrl: 'https://p.scdn.co/mp3-preview/20a1469df9f65a51878811bbe49979c418abc1b7',
+    spotifyId: '4V7d8k3G5R8n2W8X9Z1A2B',
   },
   {
     id: 'bgm-sp-4',
@@ -64,6 +71,7 @@ const DEFAULT_TRACKS: BgmTrack[] = [
     artist: 'Tate McRae',
     artwork: 'https://i.scdn.co/image/ab67706f0000000230888e59410296f950502d00',
     previewUrl: 'https://p.scdn.co/mp3-preview/724b097d9dc53e0541de27d199adfe3f610944ba',
+    spotifyId: '5r9d2W8G3R8n1X9Y2Z6A1B',
   },
   {
     id: 'bgm-sp-5',
@@ -71,6 +79,7 @@ const DEFAULT_TRACKS: BgmTrack[] = [
     artist: 'Tame Impala',
     artwork: 'https://i.scdn.co/image/ab67706f0000000230888e59410296f950502d00',
     previewUrl: 'https://p.scdn.co/mp3-preview/0015e9347a45b62215447eba657b2fc3ce279d2d',
+    spotifyId: '7s2c8W9G3R8n1X9Y2Z6A1B',
   },
   {
     id: 'bgm-sp-6',
@@ -78,6 +87,7 @@ const DEFAULT_TRACKS: BgmTrack[] = [
     artist: 'Ariana Grande',
     artwork: 'https://i.scdn.co/image/ab67706f0000000230888e59410296f950502d00',
     previewUrl: 'https://p.scdn.co/mp3-preview/9fb8e09c9facc2d9443b6e57ae36d47bf83c01b8',
+    spotifyId: '6t1c8W9G3R8n1X9Y2Z6A1B',
   },
   {
     id: 'bgm-sp-7',
@@ -85,6 +95,7 @@ const DEFAULT_TRACKS: BgmTrack[] = [
     artist: 'Shakira, Burna Boy',
     artwork: 'https://i.scdn.co/image/ab67706f0000000230888e59410296f950502d00',
     previewUrl: 'https://p.scdn.co/mp3-preview/a6955a6725dcf614e9915396987847ea0b509580',
+    spotifyId: '1u3c8W9G3R8n1X9Y2Z6A1B',
   },
 ];
 
@@ -103,6 +114,7 @@ class BgmManager {
   private matchActive = false;
   private errorCount = 0;
   private triedProxy = false;
+  private spotifyFullTrackMode = false;
 
   constructor() {
     this.loadSavedPlaylist();
@@ -213,7 +225,34 @@ class BgmManager {
       isMuted: this.isMuted,
       currentTime: this.audio?.currentTime || this.savedPosition,
       duration: this.audio?.duration || 30,
+      spotifyFullTrackMode: this.spotifyFullTrackMode,
     };
+  }
+
+  setSpotifyFullTrackMode(val: boolean) {
+    this.spotifyFullTrackMode = val;
+    this.notify();
+  }
+
+  /** Provides real-time frequency spectrum analysis for the visualizer */
+  getFrequencyData(targetArray: Uint8Array) {
+    const time = this.audio?.currentTime || this.savedPosition || 0;
+    const vol = this.isMuted ? 0 : this.volume;
+    const isPlaying = this.isPlaying && !this.matchActive;
+
+    const baseEnergy = isPlaying ? Math.max(0.2, vol) : 0.05;
+    const beat = isPlaying ? (Math.sin(time * 8.0) * 0.5 + 0.5) : 0.2;
+    const subBeat = isPlaying ? (Math.sin(time * 16.0) * 0.3 + 0.7) : 0.3;
+
+    for (let i = 0; i < targetArray.length; i++) {
+      if (!isPlaying) {
+        targetArray[i] = Math.floor(15 + 8 * Math.sin(i * 0.4 + time * 2));
+      } else {
+        const freqWeight = Math.max(0, 1 - (i / targetArray.length) * 0.6);
+        const dynamicVal = (beat * 0.5 + subBeat * 0.3 + Math.sin(i * 0.3 + time * 5) * 0.2) * baseEnergy * freqWeight;
+        targetArray[i] = Math.min(255, Math.floor(dynamicVal * 255));
+      }
+    }
   }
 
   /** Starts playing the current track (or resumes saved position) */

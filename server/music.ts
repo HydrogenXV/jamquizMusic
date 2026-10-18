@@ -151,6 +151,8 @@ export async function importSpotifyPlaylist(input: string, token?: string): Prom
               genre: 'custom' as const,
               previewUrl: t.preview_url || undefined,
               artwork: t.album?.images?.[0]?.url || cover,
+              spotifyId: t.id,
+              spotifyUri: t.uri || (t.id ? `spotify:track:${t.id}` : undefined),
             };
           });
 
@@ -188,14 +190,20 @@ export async function importSpotifyPlaylist(input: string, token?: string): Prom
   const tracks: Track[] = list
     .filter((t) => t?.title && t?.subtitle)
     .slice(0, 100)
-    .map((t, i) => ({
-      id: `sp-${parsed.id}-${i}`,
-      title: String(t.title),
-      artist: String(t.subtitle).split(',')[0].trim(),
-      year: 0,
-      genre: 'custom' as const,
-      previewUrl: t.audioPreview?.url || undefined,
-    }));
+    .map((t, i) => {
+      const spId = t.uri ? t.uri.replace('spotify:track:', '') : undefined;
+      return {
+        id: `sp-${parsed.id}-${i}`,
+        title: String(t.title),
+        artist: String(t.subtitle).split(',')[0].trim(),
+        year: 0,
+        genre: 'custom' as const,
+        previewUrl: t.audioPreview?.url || undefined,
+        artwork: cover,
+        spotifyId: spId,
+        spotifyUri: t.uri || (spId ? `spotify:track:${spId}` : undefined),
+      };
+    });
   return { name: entity?.name ?? entity?.title ?? 'Spotify Playlist', cover, tracks };
 }
 

@@ -2,9 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { music } from '../lib/audio';
 import { bgm, type BgmState } from '../lib/bgm';
 import { useI18n } from '../lib/i18n';
+import { useAuth } from '../lib/authContext';
+import { visualizerSettings, type VisualizerConfig, type VisualizerThickness } from '../lib/visualizerSettings';
 import {
   Volume2, VolumeX, Volume1, Radio, Disc3, ChevronDown, ChevronUp,
-  Sparkles, Sliders, Play, Pause, SkipForward, SkipBack, Music2
+  Sparkles, Sliders, Play, Pause, SkipForward, SkipBack, Music2,
+  Activity, ExternalLink
 } from 'lucide-react';
 import type { RoomState } from '../../shared/types';
 
@@ -14,11 +17,31 @@ interface Props {
 }
 
 export const MusicPlayerWidget: React.FC<Props> = ({ room, onOpenDebug }) => {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
+  const { user } = useAuth();
+  const isSpotifyUser = user?.provider === 'spotify';
+
   const [matchVol, setMatchVol] = useState(music.volume);
   const [isReduced, setIsReduced] = useState(music.isReduced);
   const [isExpanded, setIsExpanded] = useState(false);
   const [bgmState, setBgmState] = useState<BgmState>(bgm.getState());
+  const [spotifyFullTrack, setSpotifyFullTrack] = useState(() => localStorage.getItem('jq.bgm.spotify_full') === 'true');
+  const [visConfig, setVisConfig] = useState<VisualizerConfig>(visualizerSettings.getConfig());
+
+  useEffect(() => {
+    return visualizerSettings.subscribe(setVisConfig);
+  }, []);
+
+  const handleToggleSpotifyFull = (enable: boolean) => {
+    setSpotifyFullTrack(enable);
+    localStorage.setItem('jq.bgm.spotify_full', String(enable));
+    bgm.setSpotifyFullTrackMode(enable);
+    if (enable) {
+      bgm.pause(false);
+    } else {
+      bgm.play();
+    }
+  };
 
   useEffect(() => {
     const unsubMusic = music.subscribe((newVol, reduced) => {
@@ -66,6 +89,14 @@ export const MusicPlayerWidget: React.FC<Props> = ({ room, onOpenDebug }) => {
     : bgmState.currentTrack?.artwork || bgmState.cover;
 
   const currentVol = isMatchPhase ? matchVol : (bgmState.isMuted ? 0 : bgmState.volume);
+
+  const currentSpotifyId =
+    bgmState.currentTrack?.spotifyId ||
+    (bgmState.currentTrack?.spotifyUri?.startsWith('spotify:track:')
+      ? bgmState.currentTrack.spotifyUri.split(':')[2]
+      : bgmState.currentTrack?.id?.startsWith('sp-')
+      ? bgmState.currentTrack.id.split('-')[1]
+      : undefined);
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const v = parseFloat(e.target.value);
@@ -179,6 +210,59 @@ export const MusicPlayerWidget: React.FC<Props> = ({ room, onOpenDebug }) => {
             </div>
           )}
 
+          {/* Spotify Full Track Mode (for Spotify Logged-in Users) */}
+          {!isMatchPhase && isSpotifyUser && (
+            <div className="my-2.5 p-2.5 rounded-2xl bg-spotify/10 border border-spotify/30 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-spotify animate-pulse" />
+                  <span className="text-[11px] font-black text-spotify uppercase tracking-wider">
+                    {lang === 'th' ? 'Spotify เล่นเต็มเพลง' : 'Spotify Full Track'}
+                  </span>
+                </div>
+                <button
+                  onClick={() => handleToggleSpotifyFull(!spotifyFullTrack)}
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold border transition-colors cursor-pointer ${
+                    spotifyFullTrack
+                      ? 'bg-spotify text-black border-spotify shadow-sm font-black'
+                      : 'bg-white/5 text-neutral-400 border-white/10 hover:text-white'
+                  }`}
+                >
+                  {spotifyFullTrack ? (lang === 'th' ? 'เปิดอยู่ (ON)' : 'Full (ON)') : (lang === 'th' ? '30s Preview' : '30s Preview')}
+                </button>
+              </div>
+
+              {spotifyFullTrack && currentSpotifyId && (
+                <div className="animate-fade-up space-y-1.5">
+                  <div className="rounded-xl overflow-hidden border border-spotify/30 shadow-inner bg-black/40">
+                    <iframe
+                      src={`https://open.spotify.com/embed/track/${currentSpotifyId}?utm_source=generator&theme=0`}
+                      width="100%"
+                      height="80"
+                      frameBorder="0"
+                      allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                      loading="lazy"
+                      className="rounded-xl"
+                      title="Spotify Full Track Player"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between px-1 text-[10px] text-neutral-400">
+                    <span>{lang === 'th' ? 'เล่นเต็มเพลงผ่าน Spotify' : 'Full playback via Spotify'}</span>
+                    <a
+                      href={`https://open.spotify.com/track/${currentSpotifyId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-spotify hover:underline inline-flex items-center gap-0.5 font-bold"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      <span>{lang === 'th' ? 'เปิดใน App' : 'Open App'}</span>
+                    </a>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Volume Control Slider */}
           <div className="space-y-2 pt-2 border-t border-white/10">
             <div className="flex items-center justify-between text-xs font-bold text-neutral-300">
@@ -239,6 +323,62 @@ export const MusicPlayerWidget: React.FC<Props> = ({ room, onOpenDebug }) => {
                 {currentVol === 0 ? 'Unmute' : 'Mute'}
               </button>
             </div>
+
+            {/* Visualizer Settings inside Player Deck */}
+            {!isMatchPhase && (
+              <div className="pt-2.5 mt-2.5 border-t border-white/10 space-y-2">
+                <div className="flex items-center justify-between text-xs font-bold text-neutral-300">
+                  <span className="flex items-center gap-1.5">
+                    <Activity className="w-3.5 h-3.5 text-spotify" />
+                    <span>Audio Visualizer Effect</span>
+                  </span>
+                  <button
+                    onClick={() => visualizerSettings.setEnabled(!visConfig.enabled)}
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold border transition-colors cursor-pointer ${
+                      visConfig.enabled
+                        ? 'bg-spotify/20 text-spotify border-spotify/40 shadow-sm'
+                        : 'bg-white/5 text-neutral-400 border-white/10 hover:text-white'
+                    }`}
+                  >
+                    {visConfig.enabled ? (lang === 'th' ? 'เปิด' : 'ON') : (lang === 'th' ? 'ปิด' : 'OFF')}
+                  </button>
+                </div>
+
+                {visConfig.enabled && (
+                  <div className="space-y-1.5 animate-fade-up">
+                    <div className="flex items-center justify-between text-[11px] text-neutral-400">
+                      <span>{lang === 'th' ? 'ความหนา Effect ตามเพลง' : 'Effect Intensity'}</span>
+                      <span className="font-mono text-spotify font-bold">{visConfig.thickness.toFixed(1)}x</span>
+                    </div>
+
+                    <div className="grid grid-cols-4 gap-1">
+                      {(['thin', 'medium', 'thick', 'mega'] as VisualizerThickness[]).map((preset) => {
+                        const labels: Record<VisualizerThickness, { th: string; en: string }> = {
+                          thin: { th: 'เบา', en: 'Thin' },
+                          medium: { th: 'กลาง', en: 'Med' },
+                          thick: { th: 'หนา', en: 'Thick' },
+                          mega: { th: 'จัดเต็ม', en: 'Mega' },
+                        };
+                        const isSelected = visConfig.preset === preset;
+                        return (
+                          <button
+                            key={preset}
+                            onClick={() => visualizerSettings.setPreset(preset)}
+                            className={`py-1 rounded-lg text-[10px] font-bold border transition-all cursor-pointer ${
+                              isSelected
+                                ? 'bg-spotify text-black border-spotify shadow-sm font-black'
+                                : 'bg-white/5 text-neutral-300 border-white/10 hover:bg-white/10'
+                            }`}
+                          >
+                            {lang === 'th' ? labels[preset].th : labels[preset].en}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       ) : (

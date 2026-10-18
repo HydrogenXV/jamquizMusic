@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useI18n } from '../lib/i18n';
 import { LANGS } from '../lib/translations';
 import { isSfxMuted, setSfxMuted, sfx } from '../lib/sfx';
 import { music } from '../lib/audio';
 import { useGame } from '../lib/net';
 import { useAuth } from '../lib/authContext';
-import { Volume2, VolumeX, Globe, Trophy, Sparkles, Sliders, BookOpen, Terminal } from 'lucide-react';
+import { visualizerSettings, type VisualizerConfig, type VisualizerThickness } from '../lib/visualizerSettings';
+import { Volume2, VolumeX, Globe, Trophy, Sparkles, Sliders, BookOpen, Terminal, Activity } from 'lucide-react';
 import type { Lang } from '../../shared/types';
 
 interface Props {
@@ -24,6 +25,11 @@ export const Header: React.FC<Props> = ({ onOpenCompendium, onOpenLeaderboard, o
   const [vol, setVol] = useState(music.volume);
   const [showLangMenu, setShowLangMenu] = useState(false);
   const [showVolSlider, setShowVolSlider] = useState(false);
+  const [visConfig, setVisConfig] = useState<VisualizerConfig>(visualizerSettings.getConfig());
+
+  useEffect(() => {
+    return visualizerSettings.subscribe(setVisConfig);
+  }, []);
 
   const toggleMute = () => {
     const next = !muted;
@@ -176,24 +182,29 @@ export const Header: React.FC<Props> = ({ onOpenCompendium, onOpenLeaderboard, o
           </button>
 
           {showVolSlider && (
-            <div className="absolute right-0 mt-2 w-48 glass-strong rounded-2xl p-3 border border-white/10 shadow-2xl z-50 animate-fade-up space-y-2">
-              <div className="flex items-center justify-between text-xs font-bold text-neutral-300">
-                <span className="flex items-center gap-1">
-                  <Sliders className="w-3.5 h-3.5 text-spotify" />
-                  <span>Master Vol</span>
-                </span>
-                <span className="font-mono text-neutral-400">{Math.round(vol * 100)}%</span>
+            <div className="absolute right-0 mt-2 w-64 glass-strong rounded-2xl p-3.5 border border-white/10 shadow-2xl z-50 animate-fade-up space-y-3 bg-neutral-950/95 backdrop-blur-xl">
+              {/* Master Volume */}
+              <div>
+                <div className="flex items-center justify-between text-xs font-bold text-neutral-300 mb-1.5">
+                  <span className="flex items-center gap-1.5">
+                    <Sliders className="w-3.5 h-3.5 text-spotify" />
+                    <span>Master Vol</span>
+                  </span>
+                  <span className="font-mono text-neutral-400">{Math.round(vol * 100)}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={vol}
+                  onChange={handleVolumeChange}
+                  className="w-full accent-spotify h-1.5 bg-white/10 rounded-lg cursor-pointer"
+                />
               </div>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.01"
-                value={vol}
-                onChange={handleVolumeChange}
-                className="w-full accent-spotify h-1.5 bg-white/10 rounded-lg cursor-pointer"
-              />
-              <div className="flex items-center gap-1.5 pt-1">
+
+              {/* Quick Audio Toggles */}
+              <div className="flex items-center gap-1.5">
                 <button
                   onClick={() => {
                     music.toggleReduction();
@@ -207,10 +218,64 @@ export const Header: React.FC<Props> = ({ onOpenCompendium, onOpenLeaderboard, o
                 </button>
                 <button
                   onClick={toggleMute}
-                  className="py-1 px-2 rounded-lg text-[10px] font-bold bg-white/5 text-neutral-300 border border-white/10 hover:bg-white/10"
+                  className="py-1 px-2.5 rounded-lg text-[10px] font-bold bg-white/5 text-neutral-300 border border-white/10 hover:bg-white/10"
                 >
                   {muted ? 'SFX Off' : 'SFX On'}
                 </button>
+              </div>
+
+              {/* Visualizer Settings Divider */}
+              <div className="pt-2 border-t border-white/10 space-y-2">
+                <div className="flex items-center justify-between text-xs font-bold text-neutral-300">
+                  <span className="flex items-center gap-1.5">
+                    <Activity className="w-3.5 h-3.5 text-spotify" />
+                    <span>Audio Visualizer</span>
+                  </span>
+                  <button
+                    onClick={() => visualizerSettings.setEnabled(!visConfig.enabled)}
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold border transition-colors cursor-pointer ${
+                      visConfig.enabled
+                        ? 'bg-spotify/20 text-spotify border-spotify/40 shadow-sm'
+                        : 'bg-white/5 text-neutral-400 border-white/10 hover:text-white'
+                    }`}
+                  >
+                    {visConfig.enabled ? 'เปิด (ON)' : 'ปิด (OFF)'}
+                  </button>
+                </div>
+
+                {visConfig.enabled && (
+                  <div className="space-y-1.5 animate-fade-up">
+                    <div className="flex items-center justify-between text-[11px] text-neutral-400">
+                      <span>ความหนา Effect (Intensity)</span>
+                      <span className="font-mono text-spotify font-bold">{visConfig.thickness.toFixed(1)}x</span>
+                    </div>
+
+                    <div className="grid grid-cols-4 gap-1">
+                      {(['thin', 'medium', 'thick', 'mega'] as VisualizerThickness[]).map((preset) => {
+                        const labels: Record<VisualizerThickness, { th: string; en: string }> = {
+                          thin: { th: 'เบา', en: 'Thin' },
+                          medium: { th: 'กลาง', en: 'Med' },
+                          thick: { th: 'หนา', en: 'Thick' },
+                          mega: { th: 'จัดเต็ม', en: 'Mega' },
+                        };
+                        const isSelected = visConfig.preset === preset;
+                        return (
+                          <button
+                            key={preset}
+                            onClick={() => visualizerSettings.setPreset(preset)}
+                            className={`py-1 rounded-lg text-[10px] font-bold border transition-all cursor-pointer ${
+                              isSelected
+                                ? 'bg-spotify text-black border-spotify shadow-sm font-black'
+                                : 'bg-white/5 text-neutral-300 border-white/10 hover:bg-white/10'
+                            }`}
+                          >
+                            {lang === 'th' ? labels[preset].th : labels[preset].en}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}

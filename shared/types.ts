@@ -20,6 +20,8 @@ export interface Track {
   genre: GenreId;
   previewUrl?: string;
   artwork?: string;
+  spotifyId?: string;
+  spotifyUri?: string;
 }
 
 export interface RoomSettings {
