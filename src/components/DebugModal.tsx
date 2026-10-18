@@ -130,18 +130,18 @@ export const DebugModal: React.FC<Props> = ({ open, onClose, room }) => {
       });
       const t1 = performance.now();
       newProbes.push({
-        name: 'Spotify Embed Service',
+        name: 'Spotify Service (Proxy)',
         status: 'pass',
         latencyMs: Math.round(t1 - t0),
-        message: 'Reachable • Public embed catalog available',
+        message: 'Reachable • Server proxy scraper active',
       });
     } catch {
-      newProbes.push({ name: 'Spotify Embed Service', status: 'pass', message: 'Ready' });
+      newProbes.push({ name: 'Spotify Service (Proxy)', status: 'pass', message: 'Ready' });
     }
 
     // 6. Preview Proxy check
     try {
-      const testPreview = 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview115/v4/4e/d6/35/4ed6354b-d7fa-5d07-6b08-81e0586ee2b3/mzaf_10334887965942475971.plus.aac.p.m4a';
+      const testPreview = 'https://p.scdn.co/mp3-preview/cc5b59142bd150799f61068e522f8aaa120d28c9';
       const t0 = performance.now();
       const pRes = await fetch(getApiUrl(`/api/preview?url=${encodeURIComponent(testPreview)}`), {
         method: 'HEAD',
@@ -174,55 +174,39 @@ export const DebugModal: React.FC<Props> = ({ open, onClose, room }) => {
     }
   }, [open]);
 
-  // Handle Developer Playlist Import into BGM Radio
+  // Handle Developer Playlist Import into BGM Radio (uses backend proxy to prevent browser CORS)
   const handleImportRadio = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const url = spotifyUrlInput.trim();
     if (!url) return;
 
     setImportingRadio(true);
-    setRadioFeedback('Connecting to Spotify embed scraper...');
+    setRadioFeedback('Fetching playlist through server scraper...');
 
     try {
-      // Extract Spotify Playlist or Album ID
-      const m = url.match(/(?:intl-[a-z]{2,5}\/)?(?:playlist|album)[/:]([A-Za-z0-9]{10,40})/);
-      const id = m ? m[1] : url.replace(/[^A-Za-z0-9]/g, '');
+      const apiUrl = getApiUrl(`/api/spotify-playlist?url=${encodeURIComponent(url)}`);
+      const res = await fetch(apiUrl);
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || `HTTP ${res.status}: Failed to import playlist`);
+      }
+      const data = await res.json();
+      const tracks: BgmTrack[] = (data.tracks || [])
+        .filter((t: any) => Boolean(t.previewUrl))
+        .map((t: any) => ({
+          id: t.id,
+          title: t.title,
+          artist: t.artist,
+          artwork: t.artwork || data.cover,
+          previewUrl: t.previewUrl,
+        }));
 
-      const embedUrl = `https://open.spotify.com/embed/playlist/${id}`;
-      const res = await fetch(embedUrl);
-      if (!res.ok) throw new Error('Could not reach Spotify embed endpoint');
-      const html = await res.text();
-      const matchNext = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
-      if (!matchNext) throw new Error('Playlist embed data not found');
-
-      const data = JSON.parse(matchNext[1]);
-      const entity = data?.props?.pageProps?.state?.data?.entity;
-      const list = entity?.trackList ?? [];
-
-      if (!list.length) throw new Error('Playlist has 0 tracks or is restricted');
-
-      const cover =
-        entity?.coverArt?.sources?.sort((a: any, b: any) => (b.width ?? 0) - (a.width ?? 0))?.[0]?.url ||
-        entity?.images?.[0]?.url;
-
-      const newTracks: BgmTrack[] = list
-        .filter((t: any) => t?.title && t?.subtitle)
-        .slice(0, 50)
-        .map((t: any, idx: number) => ({
-          id: `bgm-dev-${id}-${idx}`,
-          title: String(t.title),
-          artist: String(t.subtitle).split(',')[0].trim(),
-          artwork: cover,
-          previewUrl: t.audioPreview?.url,
-        }))
-        .filter((t: any) => Boolean(t.previewUrl));
-
-      if (newTracks.length === 0) {
+      if (tracks.length === 0) {
         throw new Error('No audio previews found in this playlist. Try one of the Featured presets!');
       }
 
-      bgm.setPlaylist(newTracks, entity?.name || 'Developer Spotify Radio', cover);
-      setRadioFeedback(`✅ Successfully loaded ${newTracks.length} tracks from “${entity?.name || 'Spotify'}”!`);
+      bgm.setPlaylist(tracks, data.name || 'Developer Spotify Radio', data.cover);
+      setRadioFeedback(`✅ Successfully loaded ${tracks.length} tracks from “${data.name || 'Spotify'}”!`);
       sfx.correct();
     } catch (err: any) {
       setRadioFeedback(`❌ ${err.message || 'Failed to import playlist'}`);

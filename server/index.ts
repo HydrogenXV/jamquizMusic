@@ -8,7 +8,7 @@ import type { ClientMsg, ServerMsg } from '../shared/types';
 import { MODE_IDS, MODES } from '../shared/game';
 import { Room } from './room';
 import { queryLeaderboard, type SortKey } from './leaderboard';
-import { fetchWithTimeout, isAllowedPreview } from './music';
+import { fetchWithTimeout, isAllowedPreview, importSpotifyPlaylist } from './music';
 
 const PORT = Number(process.env.PORT) || 3001;
 const app = express();
@@ -56,6 +56,19 @@ app.get(['/health', '/api/health'], (_req, res) =>
 app.get('/api/leaderboard', (req, res) => {
   const sort = (['score', 'accuracy', 'speed'].includes(String(req.query.sort)) ? req.query.sort : 'score') as SortKey;
   res.json(queryLeaderboard(String(req.query.genre ?? 'all'), sort));
+});
+
+/** Fetch Spotify playlist metadata & track previews (CORS-safe server proxy). */
+app.get('/api/spotify-playlist', async (req, res) => {
+  const url = String(req.query.url ?? '');
+  const token = req.query.token ? String(req.query.token) : undefined;
+  if (!url) return res.status(400).json({ error: 'Missing url parameter' });
+  try {
+    const pl = await importSpotifyPlaylist(url, token);
+    res.json(pl);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message || 'Failed to fetch playlist' });
+  }
 });
 
 /** Streams a 30s preview through our origin so the browser's Web Audio analyser can read it (CORS-safe). */
