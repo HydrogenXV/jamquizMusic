@@ -8,9 +8,20 @@ interface Props {
   color?: string;
 }
 
+interface Particle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  baseRadius: number;
+  color: string;
+  glowColor: string;
+  freqBucket: number;
+  phase: number;
+}
+
 export const AmbientVisualizer: React.FC<Props> = ({
   className = 'w-full h-24 md:h-28',
-  variant = 'banner',
   color = '#1ed760',
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -30,21 +41,46 @@ export const AmbientVisualizer: React.FC<Props> = ({
     if (!ctx) return;
 
     let animId: number;
-    let phase = 0;
+    const width = 800;
+    const height = 140;
+
+    // Generate dynamic audio-reactive particle swarm
+    const particleCount = Math.floor(40 + 35 * config.thickness);
+    const colorPalette = [
+      { fill: '#1ed760', glow: 'rgba(30, 215, 96, 0.65)' },    // Spotify Green
+      { fill: '#10b981', glow: 'rgba(16, 185, 129, 0.65)' },  // Emerald
+      { fill: '#38bdf8', glow: 'rgba(56, 189, 248, 0.65)' },   // Cyan
+      { fill: '#818cf8', glow: 'rgba(129, 140, 248, 0.60)' },  // Indigo
+      { fill: '#a855f7', glow: 'rgba(168, 85, 247, 0.60)' },   // Purple
+    ];
+
+    const particles: Particle[] = [];
+    for (let i = 0; i < particleCount; i++) {
+      const palette = colorPalette[i % colorPalette.length];
+      particles.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        vx: (Math.random() - 0.5) * 0.9,
+        vy: (Math.random() - 0.5) * 0.6,
+        baseRadius: 1.8 + Math.random() * 2.8,
+        color: palette.fill,
+        glowColor: palette.glow,
+        freqBucket: Math.floor(Math.random() * 32),
+        phase: Math.random() * Math.PI * 2,
+      });
+    }
+
     const freqData = new Uint8Array(64);
+    let time = 0;
 
     const render = () => {
       animId = requestAnimationFrame(render);
-      const width = canvas.width;
-      const height = canvas.height;
       ctx.clearRect(0, 0, width, height);
 
-      // Check if BGM is active and playing
       const bgmState = bgm.getState();
       const isPlaying = bgmState.isPlaying;
       const vol = bgmState.isMuted ? 0 : bgmState.volume;
 
-      // Extract frequency or compute rhythmic procedural pulse
       bgm.getFrequencyData(freqData);
 
       let energy = 0;
@@ -53,109 +89,85 @@ export const AmbientVisualizer: React.FC<Props> = ({
       }
       energy = (energy / 32 / 255) * (isPlaying ? Math.max(0.3, vol) : 0.08);
 
-      phase += isPlaying ? 0.04 + energy * 0.05 : 0.015;
+      time += isPlaying ? 0.02 + energy * 0.04 : 0.01;
+      const thickness = config.thickness; // 0.6 to 2.5
 
-      const thickness = config.thickness; // 0.5 to 2.5
-      const baseLineWidth = Math.max(1.5, 3 * thickness);
-
-      if (variant === 'banner' || variant === 'wave') {
-        // Multi-layered horizontal flowing sound wave with glowing aura
-        const centerY = height / 2;
-        const waveLayers = [
-          { freq: 1.2, speed: 1.0, alpha: 0.35, color: '#10b981', amp: 0.7 },
-          { freq: 1.8, speed: 1.4, alpha: 0.55, color: '#1ed760', amp: 1.0 },
-          { freq: 2.6, speed: 1.9, alpha: 0.40, color: '#38bdf8', amp: 0.8 },
-          { freq: 3.5, speed: 2.3, alpha: 0.25, color: '#a855f7', amp: 0.6 },
-        ];
-
-        // Central Aura Glow
-        if (config.glow && isPlaying) {
-          ctx.save();
-          const auraRadius = Math.min(width, height) * (0.8 + energy * thickness * 0.5);
-          const aura = ctx.createRadialGradient(width / 2, centerY, 5, width / 2, centerY, auraRadius);
-          aura.addColorStop(0, `rgba(30, 215, 96, ${0.18 * thickness * energy})`);
-          aura.addColorStop(0.6, `rgba(56, 189, 248, ${0.08 * thickness})`);
-          aura.addColorStop(1, 'rgba(0, 0, 0, 0)');
-          ctx.fillStyle = aura;
-          ctx.fillRect(0, 0, width, height);
-          ctx.restore();
-        }
-
-        // Draw flowing audio waves
-        waveLayers.forEach((layer, lIdx) => {
-          ctx.save();
-          ctx.beginPath();
-
-          const step = 8;
-          const pointsCount = Math.ceil(width / step) + 1;
-
-          for (let i = 0; i < pointsCount; i++) {
-            const x = i * step;
-            const normX = i / pointsCount;
-            // Frequency modulation based on frequency bucket
-            const dataIdx = Math.floor(normX * 32) % 32;
-            const fVal = freqData[dataIdx] / 255;
-
-            // Envelope curve: smooth taper at the edges
-            const envelope = Math.sin(normX * Math.PI);
-
-            const wave =
-              Math.sin(normX * Math.PI * 4 * layer.freq + phase * layer.speed) *
-              Math.cos(normX * Math.PI * 2 + phase * 0.5);
-
-            const amp = (12 + fVal * 35 * thickness + energy * 20) * layer.amp * envelope;
-            const y = centerY + wave * amp;
-
-            if (i === 0) {
-              ctx.moveTo(x, y);
-            } else {
-              ctx.lineTo(x, y);
-            }
-          }
-
-          ctx.strokeStyle = layer.color;
-          ctx.lineWidth = baseLineWidth * (1 - lIdx * 0.15);
-          ctx.globalAlpha = Math.min(1, layer.alpha * (0.6 + energy * 0.8 * thickness));
-          ctx.lineCap = 'round';
-          ctx.stroke();
-          ctx.restore();
-        });
-
-        // Spectrum frequency equalizer bars on bottom edge
-        const barCount = 42;
-        const barWidth = (width / barCount) * 0.55;
-        const gap = (width / barCount) * 0.45;
-
-        for (let i = 0; i < barCount; i++) {
-          const x = i * (barWidth + gap) + gap / 2;
-          const dataIdx = Math.floor((i / barCount) * 32);
-          const fVal = isPlaying ? freqData[dataIdx] / 255 : 0.08 + 0.04 * Math.sin(i * 0.5 + phase);
-          const barHeight = Math.max(3, fVal * (height * 0.42) * thickness);
-
-          const grad = ctx.createLinearGradient(x, height, x, height - barHeight);
-          grad.addColorStop(0, 'rgba(30, 215, 96, 0.2)');
-          grad.addColorStop(1, 'rgba(30, 215, 96, 0.85)');
-
-          ctx.save();
-          ctx.fillStyle = grad;
-          ctx.fillRect(x, height - barHeight, barWidth * Math.min(2, thickness), barHeight);
-          ctx.restore();
-        }
-      } else {
-        // Radial Aura Visualizer (Orb)
-        const centerX = width / 2;
-        const centerY = height / 2;
-        const radius = Math.min(width, height) * 0.32 + energy * 18 * thickness;
-
+      // 1. Central Cosmic Audio Nebula Glow
+      if (config.glow) {
         ctx.save();
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-        ctx.strokeStyle = color;
-        ctx.lineWidth = baseLineWidth;
-        ctx.globalAlpha = Math.min(1, 0.4 + energy * thickness);
-        ctx.stroke();
+        const auraRadius = Math.min(width, height) * (0.6 + energy * thickness * 0.4);
+        const aura = ctx.createRadialGradient(width / 2, height / 2, 2, width / 2, height / 2, auraRadius);
+        aura.addColorStop(0, `rgba(30, 215, 96, ${0.15 * thickness * (energy + 0.2)})`);
+        aura.addColorStop(0.5, `rgba(56, 189, 248, ${0.08 * thickness * (energy + 0.1)})`);
+        aura.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = aura;
+        ctx.fillRect(0, 0, width, height);
         ctx.restore();
       }
+
+      // 2. Update & Draw Constellation Links between nearby particles
+      const maxConnectDist = (65 + 25 * thickness);
+      ctx.save();
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+
+          if (dist < maxConnectDist) {
+            const alpha = (1 - dist / maxConnectDist) * (0.25 + energy * 0.6) * (thickness * 0.7);
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.strokeStyle = `rgba(30, 215, 96, ${Math.min(0.65, alpha)})`;
+            ctx.lineWidth = Math.max(0.7, 1.2 * thickness * (1 - dist / maxConnectDist));
+            ctx.stroke();
+          }
+        }
+      }
+      ctx.restore();
+
+      // 3. Render Particles with Reactive Halo & Frequency Pulse
+      particles.forEach((p) => {
+        // Frequency amplitude for this specific particle's bucket
+        const fVal = freqData[p.freqBucket] / 255;
+        const reactiveMultiplier = isPlaying ? (1 + fVal * 2.2 * thickness + energy * 1.5) : (1 + 0.2 * Math.sin(time + p.phase));
+
+        // Movement with audio-driven turbulence
+        const speedBoost = isPlaying ? (1 + energy * 1.8) : 0.8;
+        p.x += p.vx * speedBoost;
+        p.y += (p.vy - (isPlaying ? fVal * 0.4 : 0)) * speedBoost;
+
+        // Wrap around boundaries smoothly
+        if (p.x < -10) p.x = width + 10;
+        if (p.x > width + 10) p.x = -10;
+        if (p.y < -10) p.y = height + 10;
+        if (p.y > height + 10) p.y = -10;
+
+        const currentRadius = Math.max(1.2, p.baseRadius * thickness * 0.7 * reactiveMultiplier);
+
+        ctx.save();
+
+        // Outer Particle Glow Halo
+        if (config.glow && currentRadius > 2.5) {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, currentRadius * 2.2, 0, Math.PI * 2);
+          ctx.fillStyle = p.glowColor;
+          ctx.globalAlpha = Math.min(0.45, 0.15 * thickness + energy * 0.3);
+          ctx.fill();
+        }
+
+        // Core Particle Orb
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, currentRadius, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = Math.min(1, 0.55 + energy * 0.45);
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = Math.min(20, 8 * thickness * (1 + fVal));
+        ctx.fill();
+
+        ctx.restore();
+      });
     };
 
     render();
@@ -163,17 +175,17 @@ export const AmbientVisualizer: React.FC<Props> = ({
     return () => {
       cancelAnimationFrame(animId);
     };
-  }, [config.enabled, config.thickness, config.glow, variant, color]);
+  }, [config.enabled, config.thickness, config.glow, color]);
 
   if (!config.enabled) return null;
 
   return (
-    <div className={`relative flex items-center justify-center overflow-hidden pointer-events-none ${className}`}>
+    <div className={`relative flex items-center justify-center overflow-hidden pointer-events-none select-none ${className}`}>
       <canvas
         ref={canvasRef}
         width={800}
         height={140}
-        className="w-full h-full object-contain filter drop-shadow-[0_0_15px_rgba(30,215,96,0.3)] transition-opacity duration-300"
+        className="w-full h-full object-contain filter drop-shadow-[0_0_16px_rgba(30,215,96,0.35)] transition-opacity duration-300"
       />
     </div>
   );

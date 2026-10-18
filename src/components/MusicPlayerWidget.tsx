@@ -330,7 +330,7 @@ export const MusicPlayerWidget: React.FC<Props> = ({ room, onOpenDebug }) => {
                 <div className="flex items-center justify-between text-xs font-bold text-neutral-300">
                   <span className="flex items-center gap-1.5">
                     <Activity className="w-3.5 h-3.5 text-spotify" />
-                    <span>Audio Visualizer Effect</span>
+                    <span>Particle Visualizer</span>
                   </span>
                   <button
                     onClick={() => visualizerSettings.setEnabled(!visConfig.enabled)}
@@ -347,7 +347,7 @@ export const MusicPlayerWidget: React.FC<Props> = ({ room, onOpenDebug }) => {
                 {visConfig.enabled && (
                   <div className="space-y-1.5 animate-fade-up">
                     <div className="flex items-center justify-between text-[11px] text-neutral-400">
-                      <span>{lang === 'th' ? 'ความหนา Effect ตามเพลง' : 'Effect Intensity'}</span>
+                      <span>{lang === 'th' ? 'ขนาดและความหนาแน่น Particle' : 'Particle Density & Size'}</span>
                       <span className="font-mono text-spotify font-bold">{visConfig.thickness.toFixed(1)}x</span>
                     </div>
 
