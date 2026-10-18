@@ -15,6 +15,17 @@ interface Props {
   you: string | null;
 }
 
+const FEATURED_PRESETS = [
+  { id: '37i9dQZF1DXcBWIGoYBM5M', title: "Today's Top Hits", subtitle: '50 Chart Toppers', icon: '🌟' },
+  { id: '37i9dQZEVXbMDoHDwVN2tF', title: 'Global Top 50', subtitle: 'Global Viral Hits', icon: '🌍' },
+  { id: '37i9dQZF1DWXRqgorJj26U', title: 'Rock Classics', subtitle: '100 Legendary Rock', icon: '🎸' },
+  { id: '37i9dQZF1DX4UtSsGT1Sbe', title: 'All Out 80s', subtitle: '80s Synth & Pop', icon: '🕺' },
+  { id: '37i9dQZF1DX4o1oenSJRJd', title: 'All Out 2000s', subtitle: '2000s Hits', icon: '💿' },
+  { id: '37i9dQZF1DX9tPFwDMOaN1', title: 'K-Pop ON!', subtitle: 'Hot Korean Pop', icon: '🇰🇷' },
+  { id: '37i9dQZF1DX4dyzvuaRJ0n', title: 'mint EDM Hits', subtitle: 'Club & Festival', icon: '🎧' },
+  { id: '37i9dQZF1DXbYM3nMM0oPk', title: 'Mega Hit Mix', subtitle: '75 Massive Hits', icon: '🔥' },
+];
+
 export const LobbyView: React.FC<Props> = ({ room, you }) => {
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
@@ -41,6 +52,9 @@ export const LobbyView: React.FC<Props> = ({ room, you }) => {
   const toggleGenre = (gId: GenreId) => {
     if (!isHost) return;
     sfx.click();
+    if (room.playlist) {
+      client.send({ t: 'clearPlaylist' });
+    }
     let next: GenreId[];
     if (selectedGenres.includes(gId)) {
       if (selectedGenres.length === 1) return; // keep at least 1 selected
@@ -54,6 +68,9 @@ export const LobbyView: React.FC<Props> = ({ room, you }) => {
   const handleSelectAllGenres = () => {
     if (!isHost) return;
     sfx.click();
+    if (room.playlist) {
+      client.send({ t: 'clearPlaylist' });
+    }
     if (selectedGenres.length === GENRES.length) {
       handleSettingChange({ genres: ['pop'], genre: 'pop' });
     } else {
@@ -317,6 +334,43 @@ export const LobbyView: React.FC<Props> = ({ room, you }) => {
             ) : (
               <p className="text-xs text-neutral-500 italic">{t('hostOnly')}</p>
             )}
+
+            {/* Featured Hits Quick Presets */}
+            <div className="pt-2.5 border-t border-white/10 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-black uppercase tracking-wider text-neutral-300 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-spotify" />
+                  <span>Featured Hits</span>
+                </span>
+                <span className="text-[10px] text-spotify font-bold">1-Click Load</span>
+              </div>
+              <div className="grid grid-cols-2 gap-1.5">
+                {FEATURED_PRESETS.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    disabled={!isHost || importing}
+                    onClick={() => {
+                      if (!isHost) return;
+                      sfx.click();
+                      setImporting(true);
+                      const targetUrl = `https://open.spotify.com/playlist/${p.id}`;
+                      setSpotifyUrl(targetUrl);
+                      client.send({ t: 'importPlaylist', url: targetUrl });
+                      setTimeout(() => setImporting(false), 2500);
+                    }}
+                    className="p-2 rounded-xl bg-white/5 hover:bg-spotify/20 hover:border-spotify/40 border border-white/5 text-left transition-all flex items-center gap-2 group cursor-pointer disabled:opacity-40"
+                    title={`Load ${p.title}`}
+                  >
+                    <span className="text-sm shrink-0">{p.icon}</span>
+                    <div className="truncate">
+                      <div className="text-[11px] font-bold text-neutral-200 group-hover:text-spotify truncate">{p.title}</div>
+                      <div className="text-[9px] text-neutral-400 truncate">{p.subtitle}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 

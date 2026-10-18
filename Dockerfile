@@ -9,7 +9,7 @@ WORKDIR /app
 
 # Install dependencies first for layer caching
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 
 # Copy source code and build production artifacts
 COPY . .
@@ -24,7 +24,7 @@ ENV PORT=8080
 
 COPY package*.json ./
 # Install only production dependencies (no dev dependencies in final image)
-RUN npm ci --omit=dev && npm cache clean --force
+RUN npm install --omit=dev && npm cache clean --force
 
 # Copy compiled frontend and bundled server
 COPY --from=builder /app/dist ./dist

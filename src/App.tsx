@@ -8,6 +8,7 @@ import { LeaderboardModal } from './components/LeaderboardModal';
 import { HowToPlayModal } from './components/HowToPlayModal';
 import { AuthModal } from './components/AuthModal';
 import { MusicPlayerWidget } from './components/MusicPlayerWidget';
+import { Footer } from './components/Footer';
 import { music, isAudioSuspended, unlockAudio } from './lib/audio';
 
 import { HomeView } from './views/HomeView';
@@ -174,6 +175,9 @@ function AppContent() {
 
       {/* Floating Bottom-Right Music Player Widget */}
       <MusicPlayerWidget room={room} />
+
+      {/* Global Footer Credits */}
+      <Footer />
     </div>
   );
 }

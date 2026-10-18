@@ -56,13 +56,18 @@ export async function resolveTrack(track: Track): Promise<Track> {
     const wantTitle = norm(track.title);
     const best =
       json.results.find((r) => norm(r.artistName ?? '').includes(wantArtist) && norm(r.trackName ?? '').includes(wantTitle)) ??
-      json.results.find((r) => norm(r.artistName ?? '').includes(wantArtist)) ??
-      json.results[0];
+      json.results.find((r) => norm(r.trackName ?? '').includes(wantTitle)) ??
+      json.results.find((r) => norm(r.artistName ?? '').includes(wantArtist));
+
+    if (!best) {
+      return track;
+    }
+
     const entry: CacheEntry = {
       at: Date.now(),
-      previewUrl: best?.previewUrl,
-      artwork: best?.artworkUrl100?.replace('100x100bb', '600x600bb'),
-      year: best?.releaseDate ? new Date(best.releaseDate).getFullYear() : undefined,
+      previewUrl: best.previewUrl,
+      artwork: best.artworkUrl100?.replace('100x100bb', '600x600bb'),
+      year: best.releaseDate ? new Date(best.releaseDate).getFullYear() : undefined,
     };
     cache[key] = entry;
     persistCache();
@@ -97,26 +102,32 @@ export async function resolveAll(tracks: Track[], onProgress?: (p: number) => vo
   return out;
 }
 
-// ───────── Spotify playlist importer (public playlists via the embed page) ─────────
-export function parseSpotifyId(input: string): string | null {
+// ───────── Spotify playlist / album importer (public playlists via the embed page) ─────────
+export function parseSpotifyId(input: string): { type: 'playlist' | 'album'; id: string } | null {
   const s = input.trim();
-  const m = s.match(/playlist[/:]([A-Za-z0-9]{10,40})/);
-  if (m) return m[1];
-  if (/^[A-Za-z0-9]{16,40}$/.test(s)) return s;
+  const mPl = s.match(/(?:intl-[a-z]{2,5}\/)?playlist[/:]([A-Za-z0-9]{10,40})/);
+  if (mPl) return { type: 'playlist', id: mPl[1] };
+  const mAlb = s.match(/(?:intl-[a-z]{2,5}\/)?album[/:]([A-Za-z0-9]{10,40})/);
+  if (mAlb) return { type: 'album', id: mAlb[1] };
+  if (/^[A-Za-z0-9]{16,40}$/.test(s)) return { type: 'playlist', id: s };
   return null;
 }
 
 export async function importSpotifyPlaylist(input: string): Promise<{ name: string; cover?: string; tracks: Track[] }> {
-  const id = parseSpotifyId(input);
-  if (!id) throw new Error('invalidPlaylist');
-  const res = await fetchWithTimeout(`https://open.spotify.com/embed/playlist/${id}`, 8000, {
-    headers: { 'Accept-Language': 'en-US,en;q=0.9' },
+  const parsed = parseSpotifyId(input);
+  if (!parsed) throw new Error('invalidPlaylist');
+  const embedUrl = `https://open.spotify.com/embed/${parsed.type}/${parsed.id}`;
+  const res = await fetchWithTimeout(embedUrl, 8000, {
+    headers: { 'Accept-Language': 'en-US,en;q=0.9,th;q=0.8' },
   });
   if (!res.ok) throw new Error('playlistFetchFailed');
   const html = await res.text();
   const m = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
   if (!m) throw new Error('playlistFetchFailed');
   const data = JSON.parse(m[1]);
+  if (data?.props?.pageProps?.status === 404) {
+    throw new Error('playlistEmpty');
+  }
   const entity = data?.props?.pageProps?.state?.data?.entity;
   const list: any[] = entity?.trackList ?? [];
   if (!list.length) throw new Error('playlistEmpty');
@@ -126,7 +137,7 @@ export async function importSpotifyPlaylist(input: string): Promise<{ name: stri
     .filter((t) => t?.title && t?.subtitle)
     .slice(0, 100)
     .map((t, i) => ({
-      id: `sp-${id}-${i}`,
+      id: `sp-${parsed.id}-${i}`,
       title: String(t.title),
       artist: String(t.subtitle).split(',')[0].trim(),
       year: 0,

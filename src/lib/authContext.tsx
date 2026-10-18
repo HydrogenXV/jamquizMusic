@@ -93,6 +93,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       syncPlayerProfile(profile);
     } catch (err) {
       console.error('[Google Sign-In Error]', err);
+      throw err;
     }
   };
 
@@ -105,6 +106,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     } catch (err) {
       console.error('[Spotify Sign-In Error]', err);
+      throw err;
     }
   };
 

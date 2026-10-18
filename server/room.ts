@@ -237,7 +237,9 @@ export class Room {
           const pl = await importSpotifyPlaylist(msg.url);
           this.playlist = { info: { name: pl.name, cover: pl.cover, count: pl.tracks.length }, tracks: pl.tracks };
           this.settings.genre = 'custom';
+          this.settings.genres = ['custom'];
           this.toast(p, 'playlistImported', 'success', { count: pl.tracks.length, name: pl.name });
+          this.queueBroadcast();
         } catch (e: any) {
           const key = ['invalidPlaylist', 'playlistEmpty', 'playlistFetchFailed'].includes(e?.message) ? e.message : 'playlistFetchFailed';
           this.toast(p, key);
@@ -247,11 +249,10 @@ export class Room {
       case 'clearPlaylist': {
         if (!isHost || this.phase !== 'lobby') return;
         this.playlist = undefined;
-        if (this.settings.genre === 'custom') {
-          this.settings.genre = 'pop';
-          this.settings.genres = ['pop'];
-        }
+        this.settings.genre = 'pop';
+        this.settings.genres = ['pop'];
         this.toast(p, 'playlistCleared', 'info');
+        this.queueBroadcast();
         break;
       }
       case 'acceptChallenge': {
@@ -304,10 +305,16 @@ export class Room {
       if (valid.length > 0) {
         s.genres = valid;
         s.genre = valid[0];
+        if (!valid.includes('custom')) {
+          this.playlist = undefined;
+        }
       }
     } else if (patch.genre && GENRE_IDS.includes(patch.genre) && (patch.genre !== 'custom' || this.playlist)) {
       s.genre = patch.genre;
       s.genres = [patch.genre];
+      if (patch.genre !== 'custom') {
+        this.playlist = undefined;
+      }
     }
     if (Array.isArray(patch.questionTypes)) {
       const valid = patch.questionTypes.filter((qt): qt is AskType => ['title', 'artist', 'year'].includes(qt));
@@ -356,18 +363,24 @@ export class Room {
     let pool: Track[] = [];
     const activeGenres = genres && genres.length > 0 ? genres : [genre];
 
-    if (activeGenres.includes('custom') && this.playlist) {
-      pool.push(...this.playlist.tracks);
-    }
-    if (mode === 'decade') {
+    // Priority 1: Custom imported Spotify playlist
+    if ((activeGenres.includes('custom') || genre === 'custom') && this.playlist && this.playlist.tracks.length > 0) {
+      pool = [...this.playlist.tracks];
+    } else if (mode === 'decade') {
       pool = ALL_TRACKS.filter((t) => t.year >= 1980);
     } else {
-      for (const g of activeGenres) {
-        if (g !== 'custom' && CATALOG[g]) {
-          pool.push(...CATALOG[g]);
+      // Priority 2: Multi-Topic genres (distribute tracks proportionally from each selected genre)
+      const validGenres = activeGenres.filter((g) => g !== 'custom' && CATALOG[g]);
+      if (validGenres.length > 0) {
+        const perGenre = Math.max(3, Math.ceil(this.settings.rounds / validGenres.length));
+        for (const g of validGenres) {
+          const genreTracks = shuffle(CATALOG[g] ?? []);
+          pool.push(...genreTracks.slice(0, perGenre));
         }
       }
-      if (pool.length === 0) pool = CATALOG.pop;
+      if (pool.length === 0) {
+        pool = [...CATALOG.pop];
+      }
     }
     this.pool = pool;
     const rounds = Math.min(this.settings.rounds, pool.length);

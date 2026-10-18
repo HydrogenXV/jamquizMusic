@@ -50,10 +50,19 @@ export const Header: React.FC<Props> = ({ onOpenCompendium, onOpenLeaderboard, o
             <rect x="41" y="28" width="4" height="8" rx="2" fill="#1ed760" />
           </svg>
         </div>
-        <div>
+        <div className="flex items-center gap-2">
           <span className="text-xl font-black tracking-tight text-white flex items-center gap-1">
             Spoti<span className="text-spotify">Quiz</span>
           </span>
+          <a
+            href="https://github.com/HydrogenXV"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Developed by HydrogenXV (Build 18.10.26)"
+            className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-spotify/15 text-spotify hover:bg-spotify/25 border border-spotify/30 font-bold transition-all cursor-pointer"
+          >
+            v0.3
+          </a>
         </div>
       </div>
 
