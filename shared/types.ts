@@ -190,7 +190,7 @@ export type ClientMsg =
   | { t: 'draftPick'; cards: CardId[] }
   | { t: 'answer'; choice: number; micBonus?: number }
   | { t: 'cast'; card: CardId; target: string | 'all' }
-  | { t: 'importPlaylist'; url: string }
+  | { t: 'importPlaylist'; url: string; token?: string }
   | { t: 'clearPlaylist' }
   | { t: 'acceptChallenge'; accept: boolean }
   | { t: 'playAgain' }

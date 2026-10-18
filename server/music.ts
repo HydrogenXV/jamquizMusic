@@ -113,9 +113,61 @@ export function parseSpotifyId(input: string): { type: 'playlist' | 'album'; id:
   return null;
 }
 
-export async function importSpotifyPlaylist(input: string): Promise<{ name: string; cover?: string; tracks: Track[] }> {
+export async function importSpotifyPlaylist(input: string, token?: string): Promise<{ name: string; cover?: string; tracks: Track[] }> {
   const parsed = parseSpotifyId(input);
   if (!parsed) throw new Error('invalidPlaylist');
+  const id = parsed.id;
+
+  // If token is provided and not a mock demo token, try Spotify Web API first (supports private/collaborative playlists)
+  if (token && !token.startsWith('mock_')) {
+    try {
+      const apiRes = await fetchWithTimeout(`https://api.spotify.com/v1/${parsed.type}s/${id}`, 8000, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Accept-Language': 'en-US,en;q=0.9,th;q=0.8',
+        },
+      });
+      if (apiRes.ok) {
+        const data = await apiRes.json();
+        const rawItems = parsed.type === 'album' ? (data?.tracks?.items ?? []) : (data?.tracks?.items ?? []);
+        const list: any[] = parsed.type === 'album' ? rawItems.map((item: any) => ({ track: item })) : rawItems;
+        const cover = data?.images?.[0]?.url;
+        const tracks: Track[] = list
+          .filter((item: any) => item?.track?.name && item?.track?.artists?.length)
+          .slice(0, 100)
+          .map((item: any, i: number) => {
+            const t = item.track;
+            const artistNames = (t.artists || []).map((a: any) => a.name).join(', ');
+            let year = 0;
+            if (t.album?.release_date) {
+              const y = parseInt(t.album.release_date.slice(0, 4), 10);
+              if (!isNaN(y)) year = y;
+            }
+            return {
+              id: `sp-${id}-${i}`,
+              title: String(t.name),
+              artist: artistNames,
+              year,
+              genre: 'custom' as const,
+              previewUrl: t.preview_url || undefined,
+              artwork: t.album?.images?.[0]?.url || cover,
+            };
+          });
+
+        if (tracks.length > 0) {
+          return {
+            name: data?.name || 'Spotify Playlist',
+            cover,
+            tracks,
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('[Spotify Web API Fetch Fallback]', err);
+    }
+  }
+
+  // Fallback: Embed scraper for public playlists / albums
   const embedUrl = `https://open.spotify.com/embed/${parsed.type}/${parsed.id}`;
   const res = await fetchWithTimeout(embedUrl, 8000, {
     headers: { 'Accept-Language': 'en-US,en;q=0.9,th;q=0.8' },

@@ -234,7 +234,7 @@ export class Room {
       case 'importPlaylist': {
         if (!isHost || this.phase !== 'lobby') return;
         try {
-          const pl = await importSpotifyPlaylist(msg.url);
+          const pl = await importSpotifyPlaylist(msg.url, (msg as any).token);
           this.playlist = { info: { name: pl.name, cover: pl.cover, count: pl.tracks.length }, tracks: pl.tracks };
           this.settings.genre = 'custom';
           this.settings.genres = ['custom'];

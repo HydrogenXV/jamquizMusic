@@ -3,11 +3,14 @@ import { useI18n } from '../lib/i18n';
 import { sfx } from '../lib/sfx';
 import { music } from '../lib/audio';
 import { client } from '../lib/net';
+import { useAuth } from '../lib/authContext';
+import { getSpotifyToken } from '../lib/spotifyAuth';
+import { SpotifyPlaylistModal } from '../components/SpotifyPlaylistModal';
 import { CARD_IDS, CARDS, GENRES, MODE_IDS, MODES } from '../../shared/game';
 import type { AskType, CardId, GenreId, ModeId, QuestionType, RoomState } from '../../shared/types';
 import {
   Copy, Check, Bot, UserX, Crown, Play, LogOut, Settings, Music,
-  Sparkles, Layers, Sliders, Link, ChevronRight, Lock
+  Sparkles, Layers, Sliders, Link, ChevronRight, Lock, FolderHeart
 } from 'lucide-react';
 
 interface Props {
@@ -28,9 +31,13 @@ const FEATURED_PRESETS = [
 
 export const LobbyView: React.FC<Props> = ({ room, you }) => {
   const { t } = useI18n();
+  const { user } = useAuth();
   const [copied, setCopied] = useState(false);
   const [spotifyUrl, setSpotifyUrl] = useState('');
   const [importing, setImporting] = useState(false);
+  const [isPlaylistModalOpen, setIsPlaylistModalOpen] = useState(false);
+
+  const isSpotifyUser = user?.provider === 'spotify';
 
   // Ensure any match audio is halted when in lobby
   useEffect(() => {
@@ -150,8 +157,19 @@ export const LobbyView: React.FC<Props> = ({ room, you }) => {
     if (!spotifyUrl.trim() || !isHost) return;
     sfx.click();
     setImporting(true);
-    client.send({ t: 'importPlaylist', url: spotifyUrl.trim() });
+    const token = getSpotifyToken() || undefined;
+    client.send({ t: 'importPlaylist', url: spotifyUrl.trim(), token });
     setTimeout(() => setImporting(false), 2000);
+  };
+
+  const handleSelectPlaylistFromModal = (playlistIdOrUrl: string, token?: string) => {
+    if (!isHost) return;
+    setImporting(true);
+    client.send({ t: 'importPlaylist', url: playlistIdOrUrl, token: token || getSpotifyToken() || undefined });
+    setTimeout(() => {
+      setImporting(false);
+      setIsPlaylistModalOpen(false);
+    }, 1500);
   };
 
   const toggleCardDisabled = (cId: CardId) => {
@@ -294,15 +312,22 @@ export const LobbyView: React.FC<Props> = ({ room, you }) => {
 
           {/* Spotify Playlist Importer */}
           <div className="glass rounded-3xl p-5 border border-white/10 shadow-xl space-y-3">
-            <div className="flex items-center gap-2">
-              <Music className="w-4 h-4 text-spotify" />
-              <h3 className="text-sm font-black text-white">{t('spotifyImport')}</h3>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Music className="w-4 h-4 text-spotify" />
+                <h3 className="text-sm font-black text-white">{t('spotifyImport')}</h3>
+              </div>
+              {isSpotifyUser && (
+                <span className="text-[10px] bg-spotify/20 text-spotify border border-spotify/30 px-2 py-0.5 rounded-full font-bold">
+                  Spotify Active
+                </span>
+              )}
             </div>
 
             {room.playlist && (
               <div className="p-3 rounded-xl bg-spotify/10 border border-spotify/20 flex items-center gap-3">
                 {room.playlist.cover ? (
-                  <img src={room.playlist.cover} alt="Cover" className="w-12 h-12 rounded-lg object-cover" />
+                  <img src={room.playlist.cover} alt="Cover" className="w-12 h-12 rounded-lg object-cover shadow-sm" />
                 ) : (
                   <div className="w-12 h-12 rounded-lg bg-spotify/20 flex items-center justify-center text-xl">🎵</div>
                 )}
@@ -314,23 +339,42 @@ export const LobbyView: React.FC<Props> = ({ room, you }) => {
             )}
 
             {isHost ? (
-              <form onSubmit={handleImportSpotify} className="space-y-2">
-                <input
-                  type="text"
-                  value={spotifyUrl}
-                  onChange={(e) => setSpotifyUrl(e.target.value)}
-                  placeholder={t('spotifyPlaceholder')}
-                  className="input-field text-xs"
-                />
+              <div className="space-y-3">
+                {/* 1-Click Button to open Spotify Playlist Modal */}
                 <button
-                  type="submit"
-                  disabled={!spotifyUrl.trim() || importing}
-                  className="btn-ghost w-full py-2 text-xs font-bold text-spotify border-spotify/30 hover:border-spotify flex items-center justify-center gap-1.5 cursor-pointer"
+                  type="button"
+                  onClick={() => {
+                    sfx.click();
+                    setIsPlaylistModalOpen(true);
+                  }}
+                  className="btn-primary w-full py-2.5 px-4 text-xs font-black shadow-lg shadow-spotify/25 flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <Link className="w-3.5 h-3.5" />
-                  <span>{importing ? t('importing') : t('import')}</span>
+                  <FolderHeart className="w-4 h-4" />
+                  <span>
+                    {isSpotifyUser ? t('chooseMyPlaylists') : (t('mySpotifyPlaylists') + ' / ' + t('spotifyImport'))}
+                  </span>
                 </button>
-              </form>
+
+                {/* Or paste link */}
+                <form onSubmit={handleImportSpotify} className="space-y-2 pt-1 border-t border-white/5">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={spotifyUrl}
+                      onChange={(e) => setSpotifyUrl(e.target.value)}
+                      placeholder={t('spotifyPlaceholder')}
+                      className="input-field text-xs pr-16"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!spotifyUrl.trim() || importing}
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-spotify/20 hover:bg-spotify text-spotify hover:text-black transition-all cursor-pointer disabled:opacity-40"
+                    >
+                      {importing ? t('importing') : t('import')}
+                    </button>
+                  </div>
+                </form>
+              </div>
             ) : (
               <p className="text-xs text-neutral-500 italic">{t('hostOnly')}</p>
             )}
@@ -446,16 +490,29 @@ export const LobbyView: React.FC<Props> = ({ room, you }) => {
                   </div>
                 </div>
                 {isHost && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      sfx.click();
-                      client.send({ t: 'clearPlaylist' });
-                    }}
-                    className="btn-ghost shrink-0 py-1.5 px-3 text-xs font-bold text-red-300 border-red-500/30 hover:border-red-500 hover:text-red-200 cursor-pointer"
-                  >
-                    Clear & Use Genres
-                  </button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        sfx.click();
+                        setIsPlaylistModalOpen(true);
+                      }}
+                      className="btn-ghost py-1.5 px-3 text-xs font-bold text-spotify border-spotify/30 hover:border-spotify cursor-pointer flex items-center gap-1.5"
+                    >
+                      <FolderHeart className="w-3.5 h-3.5" />
+                      <span>{t('changePlaylist')}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        sfx.click();
+                        client.send({ t: 'clearPlaylist' });
+                      }}
+                      className="btn-ghost py-1.5 px-3 text-xs font-bold text-red-300 border-red-500/30 hover:border-red-500 hover:text-red-200 cursor-pointer"
+                    >
+                      {t('clearPlaylist')}
+                    </button>
+                  </div>
                 )}
               </div>
               <p className="text-[11px] text-neutral-400">
@@ -648,6 +705,14 @@ export const LobbyView: React.FC<Props> = ({ room, you }) => {
           </div>
         </div>
       </div>
+
+      {/* Spotify Playlist Picker Modal */}
+      <SpotifyPlaylistModal
+        isOpen={isPlaylistModalOpen}
+        onClose={() => setIsPlaylistModalOpen(false)}
+        onSelectPlaylist={handleSelectPlaylistFromModal}
+        isImporting={importing}
+      />
     </div>
   );
 };
